@@ -12,16 +12,18 @@ CODE_STOP = 0x2
 COMMAND_SEND_N = 21
 COMMAND_SEND_DELTA = 0.049
 
-VERBOSE = True
+VERBOSE = False
+VVERBOSE = False
 
 
 class Drone:
+    #TODO: Ideally we would also let the app detect whether or not the drone is connected, and if not: connect it automatically
     def __init__(self):
         self.drone_ip = "192.168.0.1"
         self.drone_port = 50000
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     def send_msg(self, data):
-        if VERBOSE:
+        if VVERBOSE:
             print(" ".join(hex(n) for n in data))
         self.socket.sendto(bytes(data), (self.drone_ip, self.drone_port))
 
@@ -59,6 +61,23 @@ class Drone:
     def send_idle(self):
         self.send_msg(self.craft_msg())
 
+    """
+    Controls throttle RELATIVELY to what it is now
+    v: change in throttle (unsigned int: 0-255. No change = 128)
+    """
+    #TODO:  I guess we could improve this interface towards the user so that
+    #       a more user friendly value can be passed (e.g. -100 to +100)
+    def control_throttle(self, v=128):
+        if VERBOSE:
+            print(f"Change throttle: {v}")
+        for _ in range(COMMAND_SEND_N):
+            self.send_msg(self.craft_msg(throttle=v))
+            sleep(COMMAND_SEND_DELTA)
+        self.send_idle()
+
+
+
+
 
 def main():
     drone = Drone()
@@ -68,17 +87,35 @@ def main():
               " * lift_off\n"
               " * land\n"
               " * STOP\n")
-    for cmd in sys.argv[1:]:
+    for i, cmd in enumerate(sys.argv[1:]):
         match cmd:
+            case "nop":
+                print("Waiting...")
+                sleep(5)
             case "lift_off":
+                print("Lift off")
                 drone.lift_off()
             case "land":
+                print("Landing")
                 drone.land()
             case "STOP":
+                print("STOP")
                 drone.emergency_stop()
+            case "throttle_up":
+                print("Increasing throttle")
+                drone.control_throttle(200)
+            case "throttle_down":
+                print("Decreasing throttle")
+                drone.control_throttle(50)
+            case "off":     #Better way to land than "land", but not 100% reliable it seems
+                print("Decreasing throttle to 0")
+                for _ in range(COMMAND_SEND_N):
+                    drone.control_throttle(0)
+                    sleep(COMMAND_SEND_DELTA)
             case _:
                 print(f"Unkown command {cmd}. Ignoring")
-        sleep(5)
+        if i+1 != len(sys.argv[1:]):
+            sleep(5)
 
 
 if __name__ == "__main__":
