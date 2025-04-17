@@ -1,4 +1,5 @@
 import socket
+import sys
 from functools import reduce
 from operator import xor
 from time import sleep
@@ -62,13 +63,22 @@ class Drone:
 def main():
     drone = Drone()
 
-    drone.lift_off()
-    ## Sending IDLE command all the time appears to be optional
-    # for _ in range(50):
-    #     drone.send_idle()
-    #     sleep(COMMAND_SEND_DELTA)
-    sleep(1)
-    drone.land()
+    if len(sys.argv) == 1:
+        print("Please pass list of commands. Possible options:\n"
+              " * lift_off\n"
+              " * land\n"
+              " * STOP\n")
+    for cmd in sys.argv[1:]:
+        match cmd:
+            case "lift_off":
+                drone.lift_off()
+            case "land":
+                drone.land()
+            case "STOP":
+                drone.emergency_stop()
+            case _:
+                print(f"Unkown command {cmd}. Ignoring")
+        sleep(5)
 
 
 if __name__ == "__main__":
