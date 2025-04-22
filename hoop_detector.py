@@ -165,7 +165,7 @@ contours = cv2.findContours(mask_corrected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 contours = imutils.grab_contours(contours)
 # c = max(contours, key=cv2.contourArea)
 output_contours = frame.copy()
-rectlist = []
+contourlist = []
 for c in contours:
     (x, y, w, h) = cv2.boundingRect(c)
     rect = cv2.minAreaRect(c)
@@ -178,6 +178,7 @@ for c in contours:
     if ar > 1.8 and ar < 4.5:
         ang = calculate_rotation_angle(box)
         if (35 <= ang <= 55) or (125 <= ang <= 145):
+            contourlist.append(c)
             cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
             cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
                         2, (0, 255, 0), 5)
@@ -186,9 +187,19 @@ for c in contours:
                         2, (0, 191, 255), 5)
             cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
                         2, (0, 50, 255), 5)
+
+cnts = np.concatenate(contourlist)
+x,y,w,h=cv2.boundingRect(cnts)
+cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
+
+cX = int(x + w/2)
+cY = int(y + h/2)
+
+cv2.circle(output_contours, (cX, cY), 5, (0, 0, 255), 30)
+# cv2.putText(output_contours, f"centerpoint: {cX},{cY}", (cX-100, cY-20), cv2.FONT_HERSHEY_SIMPLEX,
+            # 2, (0, 0, 255), 5)
+
 cv2.imshow("Countours", make_size_reasonable(output_contours))
-
-
 
 
 # cv2.imshow("frame", make_size_reasonable(frame))
