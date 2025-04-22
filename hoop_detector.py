@@ -129,26 +129,30 @@ contours = imutils.grab_contours(contours)
 # c = max(contours, key=cv2.contourArea)
 output_contours = frame.copy()
 for c in contours:
-    cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
     (x, y, w, h) = cv2.boundingRect(c)
-    cv2.putText(output_contours, f"n_pts: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
-                2, (0, 255, 0), 4)
     rect = cv2.minAreaRect(c)
     box = cv2.boxPoints(rect)
     box = np.intp(box)
     print(box)
     # cv2.rectangle(output_contours, box[0], box[1], (160,130,0), 3)
-    cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
     ar = calculate_aspect_ratio(box)
-    cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
-                2, (0, 191, 255), 4)
+    #TODO:  make filtering more agressive again.
+    #       currently we have to lower it, because the fire extinguisher on the sample
+    #       image has a tiny blue line that connects with the hoop...
+    if ar > 1.8:
+        cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
+        cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
+                    2, (0, 255, 0), 4)
+        cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
+        cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
+                    2, (0, 191, 255), 4)
 
 cv2.imshow("Countours", make_size_reasonable(output_contours))
 
 
 
 
-cv2.imshow("frame", make_size_reasonable(frame))
+# cv2.imshow("frame", make_size_reasonable(frame))
 # cv2.imshow("mask", make_size_reasonable(mask))
 # cv2.imshow("mask_eroded", make_size_reasonable(mask_corrected))
 
