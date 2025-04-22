@@ -45,6 +45,43 @@ def calculate_aspect_ratio(points):
     # Return ratio with longer dimension as numerator
     return max(length, width) / min(length, width)
 
+def calculate_rotation_angle(points):
+    # Reshape points to 4x2 array
+    pts = np.array(points).reshape(4, 2)
+
+    # Calculate all four side lengths
+    side_lengths = []
+    for i in range(4):
+        x1, y1 = pts[i]
+        x2, y2 = pts[(i+1)%4]
+        side_lengths.append(np.linalg.norm([x2-x1, y2-y1]))
+
+    # Average opposite sides
+    length = (side_lengths[0] + side_lengths[2]) / 2
+    width = (side_lengths[1] + side_lengths[3]) / 2
+
+    # Select appropriate side based on longest dimension
+    if length >= width:
+        # Use first length side (points 0->1)
+        p1, p2 = pts[0], pts[1]
+    else:
+        # Use first width side (points 1->2)
+        p1, p2 = pts[1], pts[2]
+
+    # Calculate vector components
+    dx = p2[0] - p1[0]
+    dy = p2[1] - p1[1]
+
+    # Calculate angle in degrees
+    angle_deg = np.degrees(np.arctan2(dy, dx))
+
+    # Normalize to 0-180° range
+    angle_deg = angle_deg % 180
+    if angle_deg == 180:
+        angle_deg = 0
+
+    return angle_deg
+
 # frame = cv2.imread('sample_data/room_redcirc_left_solid.jpg')
 # frame = cv2.imread('sample_data/room_hexhoop__broken_bw11.jpg')
 frame = cv2.imread('sample_data/hoop_blue.jpg')
@@ -128,25 +165,27 @@ contours = cv2.findContours(mask_corrected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 contours = imutils.grab_contours(contours)
 # c = max(contours, key=cv2.contourArea)
 output_contours = frame.copy()
+rectlist = []
 for c in contours:
     (x, y, w, h) = cv2.boundingRect(c)
     rect = cv2.minAreaRect(c)
     box = cv2.boxPoints(rect)
     box = np.intp(box)
-    print(box)
-    # cv2.rectangle(output_contours, box[0], box[1], (160,130,0), 3)
     ar = calculate_aspect_ratio(box)
     #TODO:  make filtering more agressive again.
     #       currently we have to lower it, because the fire extinguisher on the sample
     #       image has a tiny blue line that connects with the hoop...
-    if ar > 1.8:
-        cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
-        cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
-                    2, (0, 255, 0), 4)
-        cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
-        cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
-                    2, (0, 191, 255), 4)
-
+    if ar > 1.8 and ar < 4.5:
+        ang = calculate_rotation_angle(box)
+        if (35 <= ang <= 55) or (125 <= ang <= 145):
+            cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
+            cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
+                        2, (0, 255, 0), 5)
+            cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
+            cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
+                        2, (0, 191, 255), 5)
+            cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
+                        2, (0, 50, 255), 5)
 cv2.imshow("Countours", make_size_reasonable(output_contours))
 
 
