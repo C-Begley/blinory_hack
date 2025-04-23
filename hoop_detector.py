@@ -179,6 +179,9 @@ def contour_detection(mask, frame):
                 cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
                             2, (0, 50, 255), 5)
 
+    if not contourlist:
+        print("No contours found in this frame!")
+        return
     cnts = np.concatenate(contourlist)
     x,y,w,h=cv2.boundingRect(cnts)
     cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
@@ -192,20 +195,38 @@ def contour_detection(mask, frame):
 
 
 def main():
-    frame = cv2.imread('sample_data/hoop_blue.jpg')
-    frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask = mask_frame(frame_hsv)
-    contour_detection(mask, frame)
+    MODE = "video"
+    if MODE == "image":
+        frame = cv2.imread('sample_data/hoop_blue.jpg')
+        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = mask_frame(frame_hsv)
+        contour_detection(mask, frame)
 
-    # cv2.imshow("frame", make_size_reasonable(frame))
-    # cv2.imshow("mask", make_size_reasonable(mask))
-    # cv2.imshow("mask_eroded", make_size_reasonable(mask_corrected))
+        # cv2.imshow("frame", make_size_reasonable(frame))
+        # cv2.imshow("mask", make_size_reasonable(mask))
+        # cv2.imshow("mask_eroded", make_size_reasonable(mask_corrected))
 
 
-    while True:
-        k = cv2.waitKey(0)
-        if k == 27:
-            break
+        while True:
+            k = cv2.waitKey(0)
+            if k == 27:
+                break
+    elif MODE == "video":
+        cap = cv2.VideoCapture('sample_data/sample_vid.mp4')
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                print("No more frames? Stream end?")
+                break
+            frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            mask = mask_frame(frame_hsv)
+            contour_detection(mask, frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
+        cap.release()
+    else:
+        print("Unknown mode!")
+        exit(0)
 
     cv2.destroyAllWindows()
 
