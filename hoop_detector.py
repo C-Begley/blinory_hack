@@ -172,13 +172,13 @@ def contour_detection(mask, frame):
             if (35 <= ang <= 55) or (125 <= ang <= 145):
                 contourlist.append(c)
                 cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
-                cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
-                            2, (0, 255, 0), 5)
+                # cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
+                #             2, (0, 255, 0), 5)
                 cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
-                cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
-                            2, (0, 191, 255), 5)
-                cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
-                            2, (0, 50, 255), 5)
+                # cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
+                #             2, (0, 191, 255), 5)
+                # cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
+                            # 2, (0, 50, 255), 5)
 
     if not contourlist:
         print("No contours found in this frame!")
