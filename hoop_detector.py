@@ -4,6 +4,12 @@ import numpy as np
 
 from sklearn.cluster import KMeans
 
+red_hsv_lower = np.array([0, 50, 50])
+red_hsv_upper = np.array([10, 255, 255])
+blue_hsv_lower = np.array([100, 60, 30])
+blue_hsv_upper = np.array([125, 255, 150])
+
+
 def make_size_reasonable(img):
     return cv2.resize(img, (800,800), interpolation=cv2.INTER_LINEAR)
 
@@ -82,134 +88,129 @@ def calculate_rotation_angle(points):
 
     return angle_deg
 
-# frame = cv2.imread('sample_data/room_redcirc_left_solid.jpg')
-# frame = cv2.imread('sample_data/room_hexhoop__broken_bw11.jpg')
-frame = cv2.imread('sample_data/hoop_blue.jpg')
-
-frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-red_hsv_lower = np.array([0, 50, 50])
-red_hsv_upper = np.array([10, 255, 255])
-blue_hsv_lower = np.array([100, 60, 30])
-blue_hsv_upper = np.array([125, 255, 150])
-
+def mask_frame(frame):
 # mask = cv2.inRange(frame_hsv, red_hsv_lower, red_hsv_upper)
-mask = cv2.inRange(frame_hsv, blue_hsv_lower, blue_hsv_upper)
+    mask = cv2.inRange(frame, blue_hsv_lower, blue_hsv_upper)
 
-mask_corrected = mask
+    mask_corrected = mask
 
-kernel = np.ones((5,5), np.uint8)
-kernel_small = np.ones((2,2), np.uint8)
-kernel_large = np.ones((20,20), np.uint8)
-# mask_corrected = cv2.erode(mask, kernel, iterations=1)
-mask_corrected = cv2.dilate(mask, kernel_small, iterations=2)   #TODO: might need to remove this in final. (thin drawn lines)
-mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel, iterations=1)
-mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_OPEN, kernel, iterations=1)
-# mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel, iterations=1)
-mask_corrected = cv2.dilate(mask_corrected, kernel, iterations=5)
-# mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel_large, iterations=2)
+    kernel = np.ones((5,5), np.uint8)
+    kernel_small = np.ones((2,2), np.uint8)
+    kernel_large = np.ones((20,20), np.uint8)
+    # mask_corrected = cv2.erode(mask, kernel, iterations=1)
+    mask_corrected = cv2.dilate(mask, kernel_small, iterations=2)   #TODO: might need to remove this in final. (thin drawn lines)
+    mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel, iterations=1)
+    mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_OPEN, kernel, iterations=1)
+    # mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel, iterations=1)
+    mask_corrected = cv2.dilate(mask_corrected, kernel, iterations=5)
+    # mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel_large, iterations=2)
+    return mask_corrected
 
-# result = cv2.bitwise_and(frame, frame, mask=mask_corrected)
+def line_detector(mask):
+    edges = cv2.Canny(mask, 50,150)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=20)
 
-edges = cv2.Canny(mask_corrected, 50,150)
-lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=20)
+    if lines is not None:
+        # lines = lines.reshape(-1, 4)
+        print(lines)
+        line_plot = frame.copy()
+        print("\n\n")
+        for line in lines:
+            cv2.line(line_plot, (line[0][0], line[0][1]), (line[0][2], line[0][3]), (0,255,0), 5)
+        # cv2.imshow("lines", make_size_reasonable(line_plot))
 
+        # Calculate angles of each line (in radians)
+        # angles = np.array([np.arctan2(y2 - y1, x2 - x1) for x1, y1, x2, y2 in lines])
+        # angles = angles.reshape(-1, 1)
+        # print(angles)
+        # if len(angles) < 2 or True:
+        #     print("Not enough angles!")
+        # else:
+        #     # Cluster angles into two groups
+        #     kmeans = KMeans(n_clusters=2).fit(angles)
+        #     labels = kmeans.labels_
 
-# LINE DETECTION
+        #     # Separate lines into clusters
+        #     cluster0 = lines[labels == 0]
+        #     cluster1 = lines[labels == 1]
 
-if lines is not None:
-    # lines = lines.reshape(-1, 4)
-    print(lines)
-    line_plot = frame.copy()
-    print("\n\n")
-    for line in lines:
-        cv2.line(line_plot, (line[0][0], line[0][1]), (line[0][2], line[0][3]), (0,255,0), 5)
-    # cv2.imshow("lines", make_size_reasonable(line_plot))
+        #     # Compute centers for both clusters
+        #     center0 = compute_cluster_center(cluster0)
+        #     center1 = compute_cluster_center(cluster1)
 
-    # Calculate angles of each line (in radians)
-    # angles = np.array([np.arctan2(y2 - y1, x2 - x1) for x1, y1, x2, y2 in lines])
-    # angles = angles.reshape(-1, 1)
-    # print(angles)
-    # if len(angles) < 2 or True:
-    #     print("Not enough angles!")
-    # else:
-    #     # Cluster angles into two groups
-    #     kmeans = KMeans(n_clusters=2).fit(angles)
-    #     labels = kmeans.labels_
+        #     if center0 and center1:
+        #         hoop_center = ((center0[0] + center1[0])//2, (center0[1] + center1[1])//2)
+        #         print("Hoop center:", hoop_center)
+        #         # Draw center on image
+        #         result = frame
+        #         cv2.circle(result, hoop_center, 5, (0, 0, 255), -1)
 
-    #     # Separate lines into clusters
-    #     cluster0 = lines[labels == 0]
-    #     cluster1 = lines[labels == 1]
+        #         cv2.imshow("result", result)
+        #     else:
+        #         print("insufficient lines to compute center")
+    else:
+            print("No lines detected")
 
-    #     # Compute centers for both clusters
-    #     center0 = compute_cluster_center(cluster0)
-    #     center1 = compute_cluster_center(cluster1)
+def contour_detection(mask, frame):
+    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = imutils.grab_contours(contours)
+    # c = max(contours, key=cv2.contourArea)
+    output_contours = frame.copy()
+    contourlist = []
+    for c in contours:
+        (x, y, w, h) = cv2.boundingRect(c)
+        rect = cv2.minAreaRect(c)
+        box = cv2.boxPoints(rect)
+        box = np.intp(box)
+        ar = calculate_aspect_ratio(box)
+        #TODO:  make filtering more agressive again.
+        #       currently we have to lower it, because the fire extinguisher on the sample
+        #       image has a tiny blue line that connects with the hoop...
+        if ar > 1.8 and ar < 4.5:
+            ang = calculate_rotation_angle(box)
+            if (35 <= ang <= 55) or (125 <= ang <= 145):
+                contourlist.append(c)
+                cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
+                cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
+                            2, (0, 255, 0), 5)
+                cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
+                cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
+                            2, (0, 191, 255), 5)
+                cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
+                            2, (0, 50, 255), 5)
 
-    #     if center0 and center1:
-    #         hoop_center = ((center0[0] + center1[0])//2, (center0[1] + center1[1])//2)
-    #         print("Hoop center:", hoop_center)
-    #         # Draw center on image
-    #         result = frame
-    #         cv2.circle(result, hoop_center, 5, (0, 0, 255), -1)
-
-    #         cv2.imshow("result", result)
-    #     else:
-    #         print("insufficient lines to compute center")
-else:
-        print("No lines detected")
-
-
-# CONTOUR APPROXIMATION
-
-contours = cv2.findContours(mask_corrected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-contours = imutils.grab_contours(contours)
-# c = max(contours, key=cv2.contourArea)
-output_contours = frame.copy()
-contourlist = []
-for c in contours:
-    (x, y, w, h) = cv2.boundingRect(c)
-    rect = cv2.minAreaRect(c)
-    box = cv2.boxPoints(rect)
-    box = np.intp(box)
-    ar = calculate_aspect_ratio(box)
-    #TODO:  make filtering more agressive again.
-    #       currently we have to lower it, because the fire extinguisher on the sample
-    #       image has a tiny blue line that connects with the hoop...
-    if ar > 1.8 and ar < 4.5:
-        ang = calculate_rotation_angle(box)
-        if (35 <= ang <= 55) or (125 <= ang <= 145):
-            contourlist.append(c)
-            cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
-            cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
-                        2, (0, 255, 0), 5)
-            cv2.drawContours(output_contours,[box],0,(0,191,255), 2)
-            cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
-                        2, (0, 191, 255), 5)
-            cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
-                        2, (0, 50, 255), 5)
-
-cnts = np.concatenate(contourlist)
-x,y,w,h=cv2.boundingRect(cnts)
-cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
-
-cX = int(x + w/2)
-cY = int(y + h/2)
-
-cv2.circle(output_contours, (cX, cY), 5, (0, 0, 255), 30)
-# cv2.putText(output_contours, f"centerpoint: {cX},{cY}", (cX-100, cY-20), cv2.FONT_HERSHEY_SIMPLEX,
-            # 2, (0, 0, 255), 5)
-
-cv2.imshow("Countours", make_size_reasonable(output_contours))
+    cnts = np.concatenate(contourlist)
+    x,y,w,h=cv2.boundingRect(cnts)
+    cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
+    cX = int(x + w/2)
+    cY = int(y + h/2)
+    cv2.circle(output_contours, (cX, cY), 5, (0, 0, 255), 30)
+    cv2.imshow("Countours", make_size_reasonable(output_contours))
+    #TODO: return useful stuff from contour detection instead of drawing here
 
 
-# cv2.imshow("frame", make_size_reasonable(frame))
-# cv2.imshow("mask", make_size_reasonable(mask))
-# cv2.imshow("mask_eroded", make_size_reasonable(mask_corrected))
 
-while True:
-    k = cv2.waitKey(0)
-    if k == 27:
-        break
 
-cv2.destroyAllWindows()
+def main():
+    frame = cv2.imread('sample_data/hoop_blue.jpg')
+    frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    mask = mask_frame(frame_hsv)
+    contour_detection(mask, frame)
+
+    # cv2.imshow("frame", make_size_reasonable(frame))
+    # cv2.imshow("mask", make_size_reasonable(mask))
+    # cv2.imshow("mask_eroded", make_size_reasonable(mask_corrected))
+
+
+    while True:
+        k = cv2.waitKey(0)
+        if k == 27:
+            break
+
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
+
 
