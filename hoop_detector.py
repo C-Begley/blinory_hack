@@ -2,6 +2,7 @@ import cv2
 import imutils
 import numpy as np
 
+from time import sleep
 from sklearn.cluster import KMeans
 
 red_hsv_lower = np.array([0, 50, 50])
@@ -223,6 +224,7 @@ def main():
             contour_detection(mask, frame)
             if cv2.waitKey(1) == ord('q'):
                 break
+            sleep(1/70) #Playback is too fast, slow it down a bit
         cap.release()
     else:
         print("Unknown mode!")
