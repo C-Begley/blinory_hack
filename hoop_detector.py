@@ -6,6 +6,7 @@ from time import sleep
 from sklearn.cluster import KMeans
 from vidgear.gears import WriteGear #Used this one instead of OpenCV's write function
                                     #Because the latter didn't work for me.
+from scipy.spatial.distance import cdist
 
 red_hsv_lower = np.array([0, 50, 50])
 red_hsv_upper = np.array([10, 255, 255])
@@ -187,25 +188,58 @@ def contour_detection(mask, frame):
 
     if not contourlist:
         print("No contours found in this frame!")
-        return frame
+        return frame, None
     cnts = np.concatenate(contourlist)
     x,y,w,h=cv2.boundingRect(cnts)
     cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
     cX = int(x + w/2)
     cY = int(y + h/2)
-    cv2.circle(output_contours, (cX, cY), 5, (0, 0, 255), 30)
+    cv2.circle(output_contours, (cX, cY), 15, (0, 0, 255), -1)
     #TODO: return useful stuff from contour detection instead of drawing here
-    return output_contours
 
+    rectlist = []
+    for c in contourlist:
+        rect = cv2.boundingRect(c)
+        rectlist.append(rect)
 
+    return output_contours, rectlist
 
+def filter_outliers(rectlist):
+    points = np.array([[rect[0]+rect[2]/2, rect[1]+rect[3]/2] for rect in rectlist])
+    distances = cdist(points, points)
+    sum_distances = distances.sum(axis=1)
+    inlier_indices = np.argsort(sum_distances)[:4]
+
+    inliers = points[inlier_indices]
+    outliers = np.delete(points, inlier_indices, axis=0)
+    inliers_rects = np.array(rectlist)[inlier_indices].tolist()
+    outliers_rects = np.delete(np.array(rectlist), inlier_indices, axis=0).tolist()
+    return inliers, outliers, inliers_rects, outliers_rects
+    #TODO: Make a decision on what to return.
+    #      Eventually we will probably only want the inlier_rects
+
+def get_bb_of_rects(rects):
+    min_x = min([r[0] for r in rects])
+    min_y = min([r[1] for r in rects])
+    max_x = int(max([r[0]+r[2] for r in rects]))
+    max_y = int(max([r[1]+r[3] for r in rects]))
+
+    return min_x, min_y, max_x-min_x, max_y-min_y
 
 def main():
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = mask_frame(frame_hsv)
-        output_contours = contour_detection(mask, frame)
+        output_contours, rectlist = contour_detection(mask, frame)
+        if rectlist:
+            inliers, outliers, inliers_rects, outliers_rects = filter_outliers(rectlist)
+            x,y,w,h = get_bb_of_rects(inliers_rects)
+            cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
+            cX = int(x + w/2)
+            cY = int(y + h/2)
+            cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
+
         cv2.imshow("Countours", make_size_reasonable(output_contours))
 
         # cv2.imshow("frame", make_size_reasonable(frame))
@@ -232,7 +266,14 @@ def main():
                 break
             frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             mask = mask_frame(frame_hsv)
-            output_contours = contour_detection(mask, frame)
+            output_contours, rectlist = contour_detection(mask, frame)
+            if rectlist:
+                inliers, outliers, inliers_rects, outliers_rects = filter_outliers(rectlist)
+                x,y,w,h = get_bb_of_rects(inliers_rects)
+                cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
+                cX = int(x + w/2)
+                cY = int(y + h/2)
+                cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
             if cv2.waitKey(1) == ord('q'):
                 break
             if SAVE:
