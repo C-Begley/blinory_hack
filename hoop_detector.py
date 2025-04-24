@@ -4,12 +4,17 @@ import numpy as np
 
 from time import sleep
 from sklearn.cluster import KMeans
+from vidgear.gears import WriteGear #Used this one instead of OpenCV's write function
+                                    #Because the latter didn't work for me.
 
 red_hsv_lower = np.array([0, 50, 50])
 red_hsv_upper = np.array([10, 255, 255])
 blue_hsv_lower = np.array([100, 60, 30])
 blue_hsv_upper = np.array([125, 255, 150])
 
+# TODO: --> args?
+MODE = "video"
+SAVE = False #Very heavy and slow process! Disable when running with Drone!
 
 def make_size_reasonable(img):
     return cv2.resize(img, (800,800), interpolation=cv2.INTER_LINEAR)
@@ -182,26 +187,26 @@ def contour_detection(mask, frame):
 
     if not contourlist:
         print("No contours found in this frame!")
-        return
+        return frame
     cnts = np.concatenate(contourlist)
     x,y,w,h=cv2.boundingRect(cnts)
     cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
     cX = int(x + w/2)
     cY = int(y + h/2)
     cv2.circle(output_contours, (cX, cY), 5, (0, 0, 255), 30)
-    cv2.imshow("Countours", make_size_reasonable(output_contours))
     #TODO: return useful stuff from contour detection instead of drawing here
+    return output_contours
 
 
 
 
 def main():
-    MODE = "video"
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = mask_frame(frame_hsv)
-        contour_detection(mask, frame)
+        output_contours = contour_detection(mask, frame)
+        cv2.imshow("Countours", make_size_reasonable(output_contours))
 
         # cv2.imshow("frame", make_size_reasonable(frame))
         # cv2.imshow("mask", make_size_reasonable(mask))
@@ -214,6 +219,12 @@ def main():
                 break
     elif MODE == "video":
         cap = cv2.VideoCapture('sample_data/sample_vid.mp4')
+        if SAVE:
+            ret, frame = cap.read()
+            oh = frame.shape[0]
+            ow = frame.shape[1]
+            output_params = {"-vcodec":"libx264", "-crf": 0, "-preset": "fast"}
+            out = WriteGear(output='output.mp4', compression_mode=True, logging=False, **output_params)
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -221,11 +232,16 @@ def main():
                 break
             frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             mask = mask_frame(frame_hsv)
-            contour_detection(mask, frame)
+            output_contours = contour_detection(mask, frame)
             if cv2.waitKey(1) == ord('q'):
                 break
+            if SAVE:
+                out.write(output_contours)
+            cv2.imshow("Countours", make_size_reasonable(output_contours))
             sleep(1/70) #Playback is too fast, slow it down a bit
         cap.release()
+        if SAVE:
+            out.close()
     else:
         print("Unknown mode!")
         exit(0)
