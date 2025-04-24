@@ -9,7 +9,7 @@ from vidgear.gears import WriteGear #Used this one instead of OpenCV's write fun
 
 red_hsv_lower = np.array([0, 50, 50])
 red_hsv_upper = np.array([10, 255, 255])
-blue_hsv_lower = np.array([100, 60, 30])
+blue_hsv_lower = np.array([100, 40, 30])
 blue_hsv_upper = np.array([125, 255, 150])
 
 # TODO: --> args?
@@ -172,7 +172,7 @@ def contour_detection(mask, frame):
         #TODO:  make filtering more agressive again.
         #       currently we have to lower it, because the fire extinguisher on the sample
         #       image has a tiny blue line that connects with the hoop...
-        if ar > 1.8 and ar < 4.5:
+        if ar > 1.8 and ar < 5:
             ang = calculate_rotation_angle(box)
             if (35 <= ang <= 55) or (125 <= ang <= 145):
                 contourlist.append(c)
