@@ -36,14 +36,17 @@ class Button:
 # Slider class
 class Slider:
     def __init__(self, x, y, length, min_val, max_val, label,
-                 orientation='horizontal', init_centered=False):
+                 orientation='horizontal', init_centered=False,
+                 snap_back=False):
         self.orientation = orientation
         self.rect = pygame.Rect(x, y, length, 20)
         self.min = min_val
         self.max = max_val
         self.label = label
         self.dragging = False
+        self.snap_back = snap_back
         self.knob_d = 8
+        self.initial_value = 0 if init_centered else min_val
 
         # Create rect based on orientation
         if self.orientation == 'horizontal':
@@ -51,21 +54,28 @@ class Slider:
             handle_y = y + self.knob_d*1.3  # Center vertically in track
             if init_centered:
                 handle_x = x + (length // 2) - self.knob_d
-                self.value = 0
             else:
                 handle_x = x
-                self.value = min_val
             self.handle_rect = pygame.Rect(handle_x, handle_y - self.knob_d, self.knob_d*2, self.knob_d*2)
         else:  # Vertical
             self.rect = pygame.Rect(x, y, 20, length)
             handle_x = x + self.knob_d*1.3  # Center horizontally in track
             if init_centered:
                 handle_y = y + (length // 2) - self.knob_d
-                self.value = 0
             else:
                 handle_y = y + length - self.knob_d*2
-                self.value = min_val
             self.handle_rect = pygame.Rect(handle_x - self.knob_d, handle_y, self.knob_d*2, self.knob_d*2)
+        self.value = self.initial_value
+        self.update_handle_from_value()
+
+    def update_handle_from_value(self):
+        """Update handle position based on current value"""
+        if self.orientation == 'horizontal':
+            ratio = (self.value - self.min) / (self.max - self.min)
+            self.handle_rect.x = self.rect.x + ratio * (self.rect.width - self.knob_d*2)
+        else:
+            ratio = (self.max - self.value) / (self.max - self.min)
+            self.handle_rect.y = self.rect.y + ratio * (self.rect.height - self.knob_d*2)
 
     def draw(self, surface):
         pygame.draw.rect(surface, GRAY, self.rect)
@@ -90,6 +100,11 @@ class Slider:
             self.value = self.max - ((self.handle_rect.y - self.rect.y) /
                                    (self.rect.height - self.knob_d*2)) * (self.max - self.min)
 
+    def reset_to_initial(self):
+        """Reset slider to its initial position"""
+        self.value = self.initial_value
+        self.update_handle_from_value()
+
 # Create UI elements
 buttons = [
     Button(50, 50, 120, 40, "Lift Off", GREEN, "takeoff"),
@@ -100,9 +115,10 @@ buttons = [
 
 sliders = [
     Slider(50, 200, 200, 0, 100, "Throttle", orientation='vertical'),
-    Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True),
-    Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True),
-    Slider(50, 550, 200, -100, 100, "Roll", init_centered=True),
+    Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True,
+           snap_back=True),
+    Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True),
+    Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True),
 ]
 
 # Main loop
@@ -138,6 +154,8 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if current_slider:
+                if current_slider.snap_back:
+                    current_slider.reset_to_initial()
                 current_slider.dragging = False
                 current_slider = None
 
