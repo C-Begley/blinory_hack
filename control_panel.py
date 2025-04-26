@@ -35,25 +35,37 @@ class Button:
 
 # Slider class
 class Slider:
-    def __init__(self, x, y, width, min_val, max_val, label, init_centered=False):
-        self.rect = pygame.Rect(x, y, width, 20)
+    def __init__(self, x, y, length, min_val, max_val, label,
+                 orientation='horizontal', init_centered=False):
+        self.orientation = orientation
+        self.rect = pygame.Rect(x, y, length, 20)
         self.min = min_val
         self.max = max_val
         self.label = label
         self.dragging = False
-
         self.knob_d = 8
 
-        if not init_centered:
-            self.value = 0
-            self.handle_rect = pygame.Rect(x, y , 16, 16)
-        else:
-            initial_handle_x = x + (width // 2)  # Center position
-            self.handle_rect = pygame.Rect(initial_handle_x, y, 16, 16)
-            self.value = (self.handle_rect.x - self.rect.x) \
-                    / self.rect.width \
-                    * (self.max - self.min) \
-                    + self.min
+        # Create rect based on orientation
+        if self.orientation == 'horizontal':
+            self.rect = pygame.Rect(x, y, length, 20)
+            handle_y = y + self.knob_d*1.3  # Center vertically in track
+            if init_centered:
+                handle_x = x + (length // 2) - self.knob_d
+                self.value = 0
+            else:
+                handle_x = x
+                self.value = min_val
+            self.handle_rect = pygame.Rect(handle_x, handle_y - self.knob_d, self.knob_d*2, self.knob_d*2)
+        else:  # Vertical
+            self.rect = pygame.Rect(x, y, 20, length)
+            handle_x = x + self.knob_d*1.3  # Center horizontally in track
+            if init_centered:
+                handle_y = y + (length // 2) - self.knob_d
+                self.value = 0
+            else:
+                handle_y = y + length - self.knob_d*2
+                self.value = min_val
+            self.handle_rect = pygame.Rect(handle_x - self.knob_d, handle_y, self.knob_d*2, self.knob_d*2)
 
     def draw(self, surface):
         pygame.draw.rect(surface, GRAY, self.rect)
@@ -64,8 +76,19 @@ class Slider:
         surface.blit(text, (self.rect.x, self.rect.y - 30))
 
     def update_value(self, pos):
-        self.handle_rect.x = max(self.rect.x, min(pos[0] - self.knob_d, self.rect.x + self.rect.width - self.knob_d))
-        self.value = ((self.handle_rect.x - self.rect.x) / self.rect.width) * (self.max + self.knob_d + 1 - self.min) + self.min
+        if self.orientation == 'horizontal':
+            self.handle_rect.x = max(self.rect.x,
+                                   min(pos[0] - self.knob_d,
+                                       self.rect.x + self.rect.width - self.knob_d*2))
+            self.value = ((self.handle_rect.x - self.rect.x) /
+                         (self.rect.width - self.knob_d*2)) * (self.max - self.min) + self.min
+        else:  # Vertical
+            self.handle_rect.y = max(self.rect.y,
+                                    min(pos[1] - self.knob_d,
+                                        self.rect.y + self.rect.height - self.knob_d*2))
+            # Invert calculation for vertical (top = max, bottom = min)
+            self.value = self.max - ((self.handle_rect.y - self.rect.y) /
+                                   (self.rect.height - self.knob_d*2)) * (self.max - self.min)
 
 # Create UI elements
 buttons = [
@@ -76,10 +99,10 @@ buttons = [
 ]
 
 sliders = [
-    Slider(50, 200, 200, 0, 100, "Throttle"),
-    Slider(50, 300, 200, -100, 100, "Pitch", init_centered=True),
-    Slider(50, 400, 200, -100, 100, "Yaw", init_centered=True),
-    Slider(50, 500, 200, -100, 100, "Roll", init_centered=True),
+    Slider(50, 200, 200, 0, 100, "Throttle", orientation='vertical'),
+    Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True),
+    Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True),
+    Slider(50, 550, 200, -100, 100, "Roll", init_centered=True),
 ]
 
 # Main loop
