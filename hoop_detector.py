@@ -199,6 +199,12 @@ def get_bb_of_rects(rects):
 
     return min_x, min_y, max_x-min_x, max_y-min_y
 
+def calculate_correction(cp):
+    corr_x = int( (cp[0] - frame_dimensions[0]/2) * 100 / (frame_dimensions[0]/2) )
+    # invert Y, because Y starts from top side in OpenCV.
+    corr_y = -int( (cp[1] - frame_dimensions[1]/2) * 100 / (frame_dimensions[1]/2) )
+    return (corr_x, corr_y)
+
 def process_frame(frame):
     #TODO: the arrow drawing functions in this function can easily be refactored so we only
     #       need to call it once.
@@ -206,7 +212,12 @@ def process_frame(frame):
     circles_to_draw = []   #(point, size, color, line_width)
     arrows_to_draw = []    #(point1, point2, color, line_width)
 
+    suggested_correction = (0, 0)
     certainty = None
+
+    cX = None
+    cY = None
+
     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = mask_frame(frame_hsv)
     output_contours, rectlist, anglelist = contour_detection(mask, frame)
@@ -334,20 +345,26 @@ def process_frame(frame):
         for arrow_to_draw in arrows_to_draw:
             cv2.arrowedLine(output_contours, *arrow_to_draw)
 
+    if cX != None and cY != None:
+        suggested_correction = calculate_correction((cX, cY))
+    else:
+        suggested_correction = None
 
-    return output_contours
+    return output_contours, suggested_correction
 
 # TODO: I'm not a big fan of this. Need a more reliable way of doing things.
-def set_frame_dimensions(dimensions):
+def set_frame_dimensions(shape):
     global frame_dimensions
-    frame_dimensions = dimensions
+    frame_dimensions = (shape[1], shape[0])
+    # For some ridiculous reason, the shape of a frame is in Y-X... Who does that?!
+    # This deserves an award for worst design of the 21st century...
 
 def main():
     global frame_dimensions
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
         frame_dimensions = frame.shape
-        output = process_frame(frame)
+        output, suggested_correction = process_frame(frame)
         cv2.imshow("Countours", make_size_reasonable(output))
         while True:
             k = cv2.waitKey(0)
@@ -356,7 +373,7 @@ def main():
     elif MODE == "video":
         cap = cv2.VideoCapture('sample_data/sample_vid.mp4')
         ret, frame = cap.read()
-        frame_dimensions = frame.shape
+        set_frame_dimensions(frame.shape)
         if SAVE:
             output_params = {"-vcodec":"libx264", "-crf": 0, "-preset": "fast"}
             out = WriteGear(output='output.mp4', compression_mode=True, logging=False, **output_params)
@@ -365,8 +382,16 @@ def main():
             if not ret:
                 print("No more frames? Stream end?")
                 break
-            output = process_frame(frame)
-            if cv2.waitKey(1) == ord('q'):
+            output, suggested_correction= process_frame(frame)
+            key = cv2.waitKey(1)
+            if key == ord(' '):
+                while True:
+                    key = cv2.waitKey(1)
+                    sleep(0.1)
+                    if key == ord(' ') or key == ord('q'):
+                        break
+
+            if key == ord('q'):
                 break
             if SAVE:
                 out.write(output)
