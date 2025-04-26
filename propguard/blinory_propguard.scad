@@ -38,19 +38,26 @@ cheatval = 6;   //I honestly don't know why I needed this.
 
 text_shift = prop_r/3;
 textdepth = 1.5;
-
 enable_text = true;
+
+foot_hole_d = 10;
 
 
 diff()
 tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     tag("remove") position(LEFT) right(wall_t/2) cuboid([wall_t, leg_w, leg_h+2]);
-    align(BOTTOM)
-        zcyl(d=motor_d+wall_t, h=floor_t);
+    align(BOTTOM){
+        zcyl(d=motor_d+wall_t, h=floor_t)
+        align(BOTTOM,RIGHT) {
+            left(wall_t/2) up(floor_t+0.1)
+            tag("remove") zcyl(d=foot_hole_d, h=floor_t+0.2);
+        }
+    }
     align(LEFT){
     right(wall_t/2) cuboid([leg_l+wall_t/2, leg_w+wall_t, leg_h]);
     tag("remove") attach(CTR) right(wall_t/2) cuboid([leg_l+wall_t/2+1, leg_w, leg_h+1]);
     }
+
     // guard beams
     for(i = [-1, 1]){
         zrot(i * guard_angle/2) align(RIGHT, TOP)
