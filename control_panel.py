@@ -14,6 +14,18 @@ WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
+def drone_throttle(val):
+    drone.control_throttle(int(val*2.55))
+
+def drone_pitch(val):
+    drone.control_pitch(int(val+125))
+
+def drone_roll(val):
+    drone.control_roll(int(val+125))
+
+def drone_yaw(val):
+    drone.control_yaw(int(val+125))
+
 def stop_ui():
     global running
     running = False
@@ -30,13 +42,13 @@ buttons = [
 
 sliders = [
     Slider(50, 200, 200, 0, 100, "Throttle", orientation='vertical',
-           action=drone.control_throttle),
+           action=drone_throttle),
     Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True,
-           snap_back=True, action=drone.control_pitch),
+           snap_back=True, action=drone_pitch),
     Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True,
-           action=drone.control_yaw),
+           action=drone_yaw),
     Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True,
-           action=drone.control_roll),
+           action=drone_roll),
 ]
 
 
