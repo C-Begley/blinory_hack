@@ -191,11 +191,10 @@ def contour_detection(mask, frame):
         return frame, None
     cnts = np.concatenate(contourlist)
     x,y,w,h=cv2.boundingRect(cnts)
-    cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
-    cX = int(x + w/2)
-    cY = int(y + h/2)
-    cv2.circle(output_contours, (cX, cY), 15, (0, 0, 255), -1)
-    #TODO: return useful stuff from contour detection instead of drawing here
+    # cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
+    # cX = int(x + w/2)
+    # cY = int(y + h/2)
+    # cv2.circle(output_contours, (cX, cY), 15, (0, 0, 255), -1)
 
     rectlist = []
     for c in contourlist:
