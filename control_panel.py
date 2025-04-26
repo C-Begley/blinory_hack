@@ -95,6 +95,32 @@ while running:
                 current_slider.update_value(event.pos)
                 # Add real-time controls here
                 current_slider.do_action()
+        elif event.type == pygame.KEYDOWN:
+            match event.key:
+                case pygame.K_SPACE:
+                    drone.emergency_stop()
+                case pygame.K_ESCAPE:
+                    drone.emergency_stop()
+                case pygame.K_r:
+                    drone_throttle(20)
+                case pygame.K_f:
+                    drone_throttle(-20)
+                case pygame.K_a:
+                    drone_roll(-20)
+                case pygame.K_d:
+                    drone_roll(20)
+                case pygame.K_w:
+                    drone_pitch(-20)
+                case pygame.K_s:
+                    drone_pitch(20)
+                case pygame.K_q:
+                    drone_yaw(-20)
+                case pygame.K_e:
+                    drone_yaw(20)
+                case pygame.K_RETURN:
+                    drone.lift_off()
+                case pygame.K_BACKSPACE:
+                    drone.land()
 
     # Draw UI elements
     for btn in buttons:
