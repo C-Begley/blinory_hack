@@ -1,6 +1,8 @@
 import pygame
 import sys
 
+from blinory import Drone
+
 # Initialize Pygame
 pygame.init()
 
@@ -33,11 +35,16 @@ class Button:
         text_rect = text.get_rect(center=self.rect.center)
         surface.blit(text, text_rect)
 
+    def do_action(self):
+        if self.action:
+            self.action()
+
+
 # Slider class
 class Slider:
     def __init__(self, x, y, length, min_val, max_val, label,
                  orientation='horizontal', init_centered=False,
-                 snap_back=False):
+                 snap_back=False, action=None):
         self.orientation = orientation
         self.rect = pygame.Rect(x, y, length, 20)
         self.min = min_val
@@ -47,6 +54,7 @@ class Slider:
         self.snap_back = snap_back
         self.knob_d = 8
         self.initial_value = 0 if init_centered else min_val
+        self.action=None
 
         # Create rect based on orientation
         if self.orientation == 'horizontal':
@@ -104,22 +112,37 @@ class Slider:
         """Reset slider to its initial position"""
         self.value = self.initial_value
         self.update_handle_from_value()
+    def do_action():
+        if self.action:
+            self.action(self.value)
+
+
+
+def stop_ui():
+    global running
+    running = False
+
+drone = Drone()
 
 # Create UI elements
 buttons = [
-    Button(50, 50, 120, 40, "Lift Off", GREEN, "takeoff"),
-    Button(200, 50, 120, 40, "Land", RED, "land"),
-    Button(350, 50, 200, 40, "Emergency Stop", RED, "emergency"),
-    Button(600, 50, 120, 40, "Exit", BLUE, "exit"),
+    Button(50, 50, 120, 40, "Lift Off", GREEN, action=drone.lift_off),
+    Button(200, 50, 120, 40, "Land", RED, action=drone.land),
+    Button(350, 50, 200, 40, "Emergency Stop", RED, action=drone.emergency_stop),
+    Button(600, 50, 120, 40, "Exit", BLUE, action=stop_ui),
 ]
 
 sliders = [
-    Slider(50, 200, 200, 0, 100, "Throttle", orientation='vertical'),
+    Slider(50, 200, 200, 0, 100, "Throttle", orientation='vertical',
+           action=drone.control_throttle),
     Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True,
-           snap_back=True),
-    Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True),
-    Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True),
+           snap_back=True, action=drone.control_pitch),
+    Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True,
+           action=drone.control_yaw),
+    Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True,
+           action=drone.control_roll),
 ]
+
 
 # Main loop
 running = True
@@ -128,6 +151,8 @@ current_slider = None
 while running:
     screen.fill(WHITE)
 
+    #TODO: I'm more of a fan of doing the event handling INSIDE of the UI element classes.
+    #       E.g. have an "on_click()" method that calls the action.
     # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -138,13 +163,7 @@ while running:
             for btn in buttons:
                 if btn.rect.collidepoint(event.pos):
                     print(f"Button pressed: {btn.text}")
-                    # Add drone control calls here
-                    # E.g.:
-                    # if btn.action == "takeoff": drone.takeoff()
-                    # elif btn.action == "land": drone.land()
-                    # elif btn.action == "emergency": drone.emergency_stop()
-                    if btn.action == "exit":
-                        running = False
+                    btn.do_action()
 
             # Check sliders
             for slider in sliders:
@@ -163,8 +182,7 @@ while running:
             if current_slider and current_slider.dragging:
                 current_slider.update_value(event.pos)
                 # Add real-time controls here
-                # E.g.:
-                # drone.set_throttle(current_slider.value)
+                current_slider.do_action()
 
     # Draw UI elements
     for btn in buttons:
