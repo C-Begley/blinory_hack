@@ -32,7 +32,8 @@ prop_r = 65;    // length of prop measured from center of motor
 prop_margin = 5;// Safety margin
 guard_angle = 90;
 guard_beam_t = wall_t;
-cheatval = 5;   //I honestly don't know why I needed this.
+guard_beam_l = prop_r - motor_d/2 - wall_t + guard_beam_t + prop_margin;
+cheatval = 6;   //I honestly don't know why I needed this.
                 // I can't mathz
 
 text_shift = prop_r/2;
@@ -51,7 +52,7 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     // guard beams
     for(i = [-1, 1]){
         zrot(i * guard_angle/2) align(RIGHT)
-            cuboid([prop_r+prop_margin + guard_beam_t, guard_beam_t, guard_beam_t]){
+            cuboid([guard_beam_l, guard_beam_t, guard_beam_t]){
                 align(TOP,RIGHT) cuboid([wall_t, guard_beam_t, prop_h]);
                 tag("remove") color("red") position(TOP) down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
                 left(text_shift) linear_extrude(textdepth)
@@ -60,7 +61,7 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     }
     // Outer arc
     for(a = [-guard_angle/2 - cheatval:1:guard_angle/2 +cheatval]){
-        align(RIGHT) zrot(a)up(prop_h) right(prop_r + guard_beam_t + prop_margin)  cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
+        align(RIGHT) zrot(a)up(prop_h) right(guard_beam_l)  cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
     }
 }
 
