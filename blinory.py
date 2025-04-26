@@ -27,9 +27,9 @@ class Drone:
             print(" ".join(hex(n) for n in data))
         self.socket.sendto(bytes(data), (self.drone_ip, self.drone_port))
 
-    def craft_msg(self, cmd=0, bank=0x80, pitch=0x80, throttle=0x80, yaw=0x80):
+    def craft_msg(self, cmd=0, roll=0x80, pitch=0x80, throttle=0x80, yaw=0x80):
         msg = BASE_MSG
-        msg[2] = bank
+        msg[2] = roll
         msg[3] = pitch
         msg[4] = throttle
         msg[5] = yaw
@@ -75,6 +75,30 @@ class Drone:
             sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
+    def control_roll(self, v=128):
+        if VERBOSE:
+            print(f"Roll: {v}")
+        for _ in range(COMMAND_SEND_N):
+            self.send_msg(self.craft_msg(roll=v))
+            sleep(COMMAND_SEND_DELTA)
+        self.send_idle()
+
+    def control_pitch(self, v=128):
+        if VERBOSE:
+            print(f"Pitch: {v}")
+        for _ in range(COMMAND_SEND_N):
+            self.send_msg(self.craft_msg(pich=v))
+            sleep(COMMAND_SEND_DELTA)
+        self.send_idle()
+
+    def control_yaw(self, v=128):
+        if VERBOSE:
+            print(f"Pitch: {v}")
+        for _ in range(COMMAND_SEND_N):
+            self.send_msg(self.craft_msg(yaw=v))
+            sleep(COMMAND_SEND_DELTA)
+        self.send_idle()
+
 
 
 
@@ -107,6 +131,24 @@ def main():
             case "throttle_down":
                 print("Decreasing throttle")
                 drone.control_throttle(50)
+            case "pitch_up":
+                print("Pitching up")
+                drone.control_pitch(200)
+            case "pitch_down":
+                print("Pitching down")
+                drone.control_pitch(50)
+            case "roll_left":
+                print("Rolling left")
+                drone.control_roll(50)
+            case "roll_right":
+                print("Rolling right")
+                drone.control_pitch(200)
+            case "rot_left":
+                print("Rotating left")
+                drone.control_yaw(50)
+            case "rot_right":
+                print("Rotating right")
+                drone.control_yaw(200)
             case "off":     #Better way to land than "land", but not 100% reliable it seems
                 print("Decreasing throttle to 0")
                 for _ in range(COMMAND_SEND_N):
