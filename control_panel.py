@@ -5,6 +5,8 @@ from blinory import Drone
 from ui_colors import *
 from ui_elements import Button, Slider
 
+#TODO: add one try-catch around entire program that will send an emergency stop before crashing?
+
 # Initialize Pygame
 pygame.init()
 
@@ -15,7 +17,9 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
 def drone_throttle(val):
-    drone.control_throttle(int(val*2.55))
+    #TODO: Which one is it? How does it work?
+    # drone.control_throttle(int(val*2.55))
+    drone.control_throttle(int(val+125))
 
 def drone_pitch(val):
     drone.control_pitch(int(val+125))
@@ -41,8 +45,8 @@ buttons = [
 ]
 
 sliders = [
-    Slider(50, 200, 200, 0, 100, "Throttle", orientation='vertical',
-           action=drone_throttle),
+    Slider(50, 200, 200, -100, 100, "Throttle", orientation='vertical',
+           init_centered=True, snap_back=True, action=drone_throttle),
     Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True,
            snap_back=True, action=drone_pitch),
     Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True,
