@@ -180,27 +180,25 @@ def get_bb_of_rects(rects):
 
     return min_x, min_y, max_x-min_x, max_y-min_y
 
+def process_frame(frame):
+    frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    mask = mask_frame(frame_hsv)
+    output_contours, rectlist = contour_detection(mask, frame)
+    if rectlist:
+        inliers, outliers, inliers_rects, outliers_rects = filter_outliers(rectlist)
+        x,y,w,h = get_bb_of_rects(inliers_rects)
+        cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
+        cX = int(x + w/2)
+        cY = int(y + h/2)
+        cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
+
+    return output_contours
+
 def main():
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
-        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask = mask_frame(frame_hsv)
-        output_contours, rectlist = contour_detection(mask, frame)
-        if rectlist:
-            inliers, outliers, inliers_rects, outliers_rects = filter_outliers(rectlist)
-            x,y,w,h = get_bb_of_rects(inliers_rects)
-            cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
-            cX = int(x + w/2)
-            cY = int(y + h/2)
-            cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
-
-        cv2.imshow("Countours", make_size_reasonable(output_contours))
-
-        # cv2.imshow("frame", make_size_reasonable(frame))
-        # cv2.imshow("mask", make_size_reasonable(mask))
-        # cv2.imshow("mask_eroded", make_size_reasonable(mask_corrected))
-
-
+        output = process_frame(frame)
+        cv2.imshow("Countours", make_size_reasonable(output))
         while True:
             k = cv2.waitKey(0)
             if k == 27:
@@ -218,21 +216,12 @@ def main():
             if not ret:
                 print("No more frames? Stream end?")
                 break
-            frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            mask = mask_frame(frame_hsv)
-            output_contours, rectlist = contour_detection(mask, frame)
-            if rectlist:
-                inliers, outliers, inliers_rects, outliers_rects = filter_outliers(rectlist)
-                x,y,w,h = get_bb_of_rects(inliers_rects)
-                cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
-                cX = int(x + w/2)
-                cY = int(y + h/2)
-                cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
+            output = process_frame(frame)
             if cv2.waitKey(1) == ord('q'):
                 break
             if SAVE:
-                out.write(output_contours)
-            cv2.imshow("Countours", make_size_reasonable(output_contours))
+                out.write(output)
+            cv2.imshow("Countours", make_size_reasonable(output))
             sleep(1/70) #Playback is too fast, slow it down a bit
         cap.release()
         if SAVE:
