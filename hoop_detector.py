@@ -17,6 +17,7 @@ blue_hsv_upper = np.array([125, 255, 150])
 # TODO: --> args?
 MODE = "video"
 SAVE = False #Very heavy and slow process! Disable when running with Drone!
+DRAW = True
 
 #TODO: currently this is set in main, which we won't have access to when using it as a lib.
 frame_dimensions = (0,0)
@@ -201,6 +202,10 @@ def get_bb_of_rects(rects):
 def process_frame(frame):
     #TODO: the arrow drawing functions in this function can easily be refactored so we only
     #       need to call it once.
+    rects_to_draw = []     #(point, dims, color, line_width)
+    circles_to_draw = []   #(point, size, color, line_width)
+    arrows_to_draw = []    #(point1, point2, color, line_width)
+
     certainty = None
     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = mask_frame(frame_hsv)
@@ -216,10 +221,10 @@ def process_frame(frame):
                 certainty = PredictionCertainty.NOISY_PREDICTION
             else:
                 certainty = PredictionCertainty.RELIABLE
-            cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
+            rects_to_draw.append(((x-50,y-50),(x+w+50,y+h+50),(0,255,0),8))
             cX = int(x + w/2)
             cY = int(y + h/2)
-            cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
+            circles_to_draw.append(((cX,cY), 10, (0, 255, 0), -1))
         elif len(inliers) == 2:
             certainty = PredictionCertainty.DIRECTION_ESTIMATE
             if abs(inliers[1][0] - inliers[0][0]) > abs(inliers[1][1] - inliers[0][1]):
@@ -245,12 +250,12 @@ def process_frame(frame):
                     cX = int(x + w/2)
                     cY = int(y + h/2)
                     #TODO: make arrowlength dependent on frame dimensions
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX, cY-100), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX, cY-100), (255,50,255), 10))
                 else:
                     # shape = /  \ --> We are too high
                     cX = int(x + w/2)
                     cY = int(y + h/2)
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX, cY+100), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX, cY+100), (255,50,255), 10))
             else:
                 # The segments are on a vertical line
                 if inliers[0][1] < inliers[1][1]:
@@ -272,13 +277,13 @@ def process_frame(frame):
                     #         /
                     cX = int(x + w/2)
                     cY = int(y + h/2)
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX-200, cY), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX-200, cY), (255,50,255), 10))
                 else:
                     # shape = /  --> We are too far left
                     #         \
                     cX = int(x + w/2)
                     cY = int(y + h/2)
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX+200, cY), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX+200, cY), (255,50,255), 10))
 
         elif len(inliers) == 1:
             #TODO: There's one import drawback of the current implementation!
@@ -298,22 +303,22 @@ def process_frame(frame):
                 if inliers[0][0] > frame_dimensions[0]/2:
                     # segment is in right-most part of the screen
                     # --> down-left
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX-200, cY+200), (0,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX-200, cY+200), (255,50,255), 10))
                 else:
                     # segment is in left-most part of the screen
                     # --> up-right
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX+200, cY-200), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX+200, cY-200), (255,50,255), 10))
             else:
                 # Either BOTTOM-RIGHT or TOP-LEFT
                 # --> Steer down-right or up-left
                 if inliers[0][0] > frame_dimensions[0]/2:
                     # segment is in right-most part of the screen
                     # --> up-left
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX-200, cY-200), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX-200, cY-200), (255,50,255), 10))
                 else:
                     # segment is in left-most part of the screen
                     # --> down-right
-                    cv2.arrowedLine(output_contours, (cX, cY), (cX+200, cY+200), (255,50,255), 10)
+                    arrows_to_draw.append(((cX, cY), (cX+200, cY+200), (255,50,255), 10))
         else:
             certainty = PredictionCertainty.NONE
         #TODO: return both the prediction and the certainty of the prediction
@@ -321,6 +326,14 @@ def process_frame(frame):
         #TODO: Ideally we also calculate the pseudo distance from the hoop
         #       by checking the segment sizes.
         #       Larger size = closer to hoop --> less agressive controlling of drone
+    if DRAW:
+        for rect_to_draw in rects_to_draw:
+            cv2.rectangle(output_contours, *rect_to_draw)
+        for circle_to_draw in circles_to_draw:
+            cv2.circle(output_contours, *circle_to_draw)
+        for arrow_to_draw in arrows_to_draw:
+            cv2.arrowedLine(output_contours, *arrow_to_draw)
+
 
     return output_contours
 
