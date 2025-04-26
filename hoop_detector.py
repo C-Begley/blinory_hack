@@ -324,6 +324,11 @@ def process_frame(frame):
 
     return output_contours
 
+# TODO: I'm not a big fan of this. Need a more reliable way of doing things.
+def set_frame_dimensions(dimensions):
+    global frame_dimensions
+    frame_dimensions = dimensions
+
 def main():
     global frame_dimensions
     if MODE == "image":
