@@ -113,51 +113,6 @@ def mask_frame(frame):
     # mask_corrected = cv2.morphologyEx(mask_corrected, cv2.MORPH_CLOSE, kernel_large, iterations=2)
     return mask_corrected
 
-def line_detector(mask):
-    edges = cv2.Canny(mask, 50,150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=20)
-
-    if lines is not None:
-        # lines = lines.reshape(-1, 4)
-        print(lines)
-        line_plot = frame.copy()
-        print("\n\n")
-        for line in lines:
-            cv2.line(line_plot, (line[0][0], line[0][1]), (line[0][2], line[0][3]), (0,255,0), 5)
-        # cv2.imshow("lines", make_size_reasonable(line_plot))
-
-        # Calculate angles of each line (in radians)
-        # angles = np.array([np.arctan2(y2 - y1, x2 - x1) for x1, y1, x2, y2 in lines])
-        # angles = angles.reshape(-1, 1)
-        # print(angles)
-        # if len(angles) < 2 or True:
-        #     print("Not enough angles!")
-        # else:
-        #     # Cluster angles into two groups
-        #     kmeans = KMeans(n_clusters=2).fit(angles)
-        #     labels = kmeans.labels_
-
-        #     # Separate lines into clusters
-        #     cluster0 = lines[labels == 0]
-        #     cluster1 = lines[labels == 1]
-
-        #     # Compute centers for both clusters
-        #     center0 = compute_cluster_center(cluster0)
-        #     center1 = compute_cluster_center(cluster1)
-
-        #     if center0 and center1:
-        #         hoop_center = ((center0[0] + center1[0])//2, (center0[1] + center1[1])//2)
-        #         print("Hoop center:", hoop_center)
-        #         # Draw center on image
-        #         result = frame
-        #         cv2.circle(result, hoop_center, 5, (0, 0, 255), -1)
-
-        #         cv2.imshow("result", result)
-        #     else:
-        #         print("insufficient lines to compute center")
-    else:
-            print("No lines detected")
-
 def contour_detection(mask, frame):
     contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours = imutils.grab_contours(contours)
