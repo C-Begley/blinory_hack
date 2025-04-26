@@ -2,6 +2,7 @@ import cv2
 import imutils
 import numpy as np
 
+from enum import Enum
 from time import sleep
 from sklearn.cluster import KMeans
 from vidgear.gears import WriteGear #Used this one instead of OpenCV's write function
@@ -16,6 +17,18 @@ blue_hsv_upper = np.array([125, 255, 150])
 # TODO: --> args?
 MODE = "video"
 SAVE = False #Very heavy and slow process! Disable when running with Drone!
+
+#TODO: currently this is set in main, which we won't have access to when using it as a lib.
+frame_dimensions = (0,0)
+
+class PredictionCertainty(Enum):
+    CERTAIN = 1,                # 4 hoop segments: prediction can be relied on
+    RELIABLE = 2,               # 3 hoop segments: enough to estimate center of hoop
+    DIRECTION_ESTIMATE = 3,     # 2 hoop segments: enough to estimate direction
+    DIRECTION_GUESS = 4,        # 1 hoop segments: we guess one of two possible directions
+    NOISY_PREDICTION = 5,       # >4 hoop segments: we potentially have detected an incorrect segment
+    NONE = 6
+
 
 def make_size_reasonable(img):
     return cv2.resize(img, (800,800), interpolation=cv2.INTER_LINEAR)
@@ -119,6 +132,7 @@ def contour_detection(mask, frame):
     # c = max(contours, key=cv2.contourArea)
     output_contours = frame.copy()
     contourlist = []
+    anglelist = []
     for c in contours:
         (x, y, w, h) = cv2.boundingRect(c)
         rect = cv2.minAreaRect(c)
@@ -132,6 +146,7 @@ def contour_detection(mask, frame):
             ang = calculate_rotation_angle(box)
             if (35 <= ang <= 55) or (125 <= ang <= 145):
                 contourlist.append(c)
+                anglelist.append(ang)
                 cv2.drawContours(output_contours, [c], -1, (0, 255, 0), 3)
                 # cv2.putText(output_contours, f"np: {len(c)}", (x, y-15), cv2.FONT_HERSHEY_SIMPLEX,
                 #             2, (0, 255, 0), 5)
@@ -139,11 +154,10 @@ def contour_detection(mask, frame):
                 # cv2.putText(output_contours, f"ar: {ar:.0f}", (x, y-60), cv2.FONT_HERSHEY_SIMPLEX,
                 #             2, (0, 191, 255), 5)
                 # cv2.putText(output_contours, f"ang: {ang:.1f}", (x, y+30), cv2.FONT_HERSHEY_SIMPLEX,
-                            # 2, (0, 50, 255), 5)
+                #             2, (0, 50, 255), 5)
 
     if not contourlist:
-        print("No contours found in this frame!")
-        return frame, None
+        return frame, None, None
     cnts = np.concatenate(contourlist)
     x,y,w,h=cv2.boundingRect(cnts)
     # cv2.rectangle(output_contours, (x-100,y-100),(x+w+100,y+h+100), (0,0,255),10)
@@ -156,9 +170,9 @@ def contour_detection(mask, frame):
         rect = cv2.boundingRect(c)
         rectlist.append(rect)
 
-    return output_contours, rectlist
+    return output_contours, rectlist, anglelist
 
-def filter_outliers(rectlist):
+def filter_outliers(rectlist, anglelist):
     points = np.array([[rect[0]+rect[2]/2, rect[1]+rect[3]/2] for rect in rectlist])
     distances = cdist(points, points)
     sum_distances = distances.sum(axis=1)
@@ -168,7 +182,11 @@ def filter_outliers(rectlist):
     outliers = np.delete(points, inlier_indices, axis=0)
     inliers_rects = np.array(rectlist)[inlier_indices].tolist()
     outliers_rects = np.delete(np.array(rectlist), inlier_indices, axis=0).tolist()
-    return inliers, outliers, inliers_rects, outliers_rects
+    angle_inliers = np.array(anglelist)[inlier_indices].tolist()
+    angle_outliers = np.delete(np.array(anglelist), inlier_indices, axis=0).tolist()
+    #NOTE:  inliers/outliers are CENTERS of the rectts,
+    #       while inliers_rects/outliers_rects are (x,y,w,h) tuples.
+    return inliers, outliers, inliers_rects, outliers_rects, angle_inliers, angle_outliers
     #TODO: Make a decision on what to return.
     #      Eventually we will probably only want the inlier_rects
 
@@ -181,22 +199,136 @@ def get_bb_of_rects(rects):
     return min_x, min_y, max_x-min_x, max_y-min_y
 
 def process_frame(frame):
+    #TODO: the arrow drawing functions in this function can easily be refactored so we only
+    #       need to call it once.
+    certainty = None
     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = mask_frame(frame_hsv)
-    output_contours, rectlist = contour_detection(mask, frame)
+    output_contours, rectlist, anglelist = contour_detection(mask, frame)
     if rectlist:
-        inliers, outliers, inliers_rects, outliers_rects = filter_outliers(rectlist)
+        inliers, outliers, inliers_rects, outliers_rects, angle_inliers, angle_outliers \
+            = filter_outliers(rectlist, anglelist)
         x,y,w,h = get_bb_of_rects(inliers_rects)
-        cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
-        cX = int(x + w/2)
-        cY = int(y + h/2)
-        cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
+        if len(inliers) > 2:
+            if len(inliers) <= 4:
+                certainty = PredictionCertainty.CERTAIN
+            elif len(inliers) > 4:
+                certainty = PredictionCertainty.NOISY_PREDICTION
+            else:
+                certainty = PredictionCertainty.RELIABLE
+            cv2.rectangle(output_contours, (x-50,y-50),(x+w+50,y+h+50), (0,255,0),8)
+            cX = int(x + w/2)
+            cY = int(y + h/2)
+            cv2.circle(output_contours, (cX, cY), 10, (0, 255, 0), -1)
+        elif len(inliers) == 2:
+            certainty = PredictionCertainty.DIRECTION_ESTIMATE
+            if abs(inliers[1][0] - inliers[0][0]) > abs(inliers[1][1] - inliers[0][1]):
+                # The segments are on a horizontal line
+                if inliers[0][0] < inliers[1][0]:
+                    seg_l = inliers[0]
+                    seg_r = inliers[1]
+                    #seg_l_rect = inliers_rects[0]
+                    #seg_r_rect = inliers_rects[1]
+                    seg_l_angle = angle_inliers[0]
+                    seg_r_angle = angle_inliers[1]
+                else:
+                    seg_l = inliers[1]
+                    seg_r = inliers[0]
+                    #seg_l_rect = inliers_rects[1]
+                    #seg_r_rect = inliers_rects[0]
+                    seg_l_angle = angle_inliers[1]
+                    seg_r_angle = angle_inliers[0]
+                #TODO: should we check if the angles are more or less what we expect here?
+                #       I don't think so, right? We already filtered them?
+                if seg_l_angle < seg_r_angle:
+                    # shape = \  / --> We are too low
+                    cX = int(x + w/2)
+                    cY = int(y + h/2)
+                    #TODO: make arrowlength dependent on frame dimensions
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX, cY-100), (255,50,255), 10)
+                else:
+                    # shape = /  \ --> We are too high
+                    cX = int(x + w/2)
+                    cY = int(y + h/2)
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX, cY+100), (255,50,255), 10)
+            else:
+                # The segments are on a vertical line
+                if inliers[0][1] < inliers[1][1]:
+                    seg_t = inliers[0]
+                    seg_b = inliers[1]
+                    #seg_t_rect = inliers_rects[0]
+                    #seg_b_rect = inliers_rects[1]
+                    seg_t_angle = angle_inliers[0]
+                    seg_b_angle = angle_inliers[1]
+                else:
+                    seg_t = inliers[1]
+                    seg_b = inliers[0]
+                    #seg_t_rect = inliers_rects[1]
+                    #seg_b_rect = inliers_rects[0]
+                    seg_t_angle = angle_inliers[1]
+                    seg_b_angle = angle_inliers[0]
+                if seg_t_angle < seg_b_angle:
+                    # shape = \  --> We are too far right
+                    #         /
+                    cX = int(x + w/2)
+                    cY = int(y + h/2)
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX-200, cY), (255,50,255), 10)
+                else:
+                    # shape = /  --> We are too far left
+                    #         \
+                    cX = int(x + w/2)
+                    cY = int(y + h/2)
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX+200, cY), (255,50,255), 10)
+
+        elif len(inliers) == 1:
+            #TODO: There's one import drawback of the current implementation!
+            #       If the camera POV centerpoint is OUTSIDE of the hoop,
+            #       AND it can only see a single segment, it will recommend steering the drone
+            #       away from the hoop!!!
+            #       Either we need to improve this algorithm (is that even possible?)
+            #       Or be intelligent enough about this in the steering of the drone.
+            certainty = PredictionCertainty.DIRECTION_GUESS
+            cX = int(inliers[0][0])
+            cY = int(inliers[0][1])
+            if abs(angle_inliers[0]-45) < abs(angle_inliers[0]-135):
+                #TODO: For now I only take x-axis into account.
+                #       I think for 99% of the cases this will be enough.
+                #       Ideally though, we would use some Pythagoras shit or smt.
+                # Either TOP-RIGHT or BOTTOM-LEFT
+                if inliers[0][0] > frame_dimensions[0]/2:
+                    # segment is in right-most part of the screen
+                    # --> down-left
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX-200, cY+200), (0,50,255), 10)
+                else:
+                    # segment is in left-most part of the screen
+                    # --> up-right
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX+200, cY-200), (255,50,255), 10)
+            else:
+                # Either BOTTOM-RIGHT or TOP-LEFT
+                # --> Steer down-right or up-left
+                if inliers[0][0] > frame_dimensions[0]/2:
+                    # segment is in right-most part of the screen
+                    # --> up-left
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX-200, cY-200), (255,50,255), 10)
+                else:
+                    # segment is in left-most part of the screen
+                    # --> down-right
+                    cv2.arrowedLine(output_contours, (cX, cY), (cX+200, cY+200), (255,50,255), 10)
+        else:
+            certainty = PredictionCertainty.NONE
+        #TODO: return both the prediction and the certainty of the prediction
+
+        #TODO: Ideally we also calculate the pseudo distance from the hoop
+        #       by checking the segment sizes.
+        #       Larger size = closer to hoop --> less agressive controlling of drone
 
     return output_contours
 
 def main():
+    global frame_dimensions
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
+        frame_dimensions = frame.shape
         output = process_frame(frame)
         cv2.imshow("Countours", make_size_reasonable(output))
         while True:
@@ -205,10 +337,9 @@ def main():
                 break
     elif MODE == "video":
         cap = cv2.VideoCapture('sample_data/sample_vid.mp4')
+        ret, frame = cap.read()
+        frame_dimensions = frame.shape
         if SAVE:
-            ret, frame = cap.read()
-            oh = frame.shape[0]
-            ow = frame.shape[1]
             output_params = {"-vcodec":"libx264", "-crf": 0, "-preset": "fast"}
             out = WriteGear(output='output.mp4', compression_mode=True, logging=False, **output_params)
         while cap.isOpened():
