@@ -48,9 +48,10 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     tag("remove") position(LEFT) right(wall_t/2) cuboid([wall_t, leg_w, leg_h+2]);
     align(BOTTOM){
         zcyl(d=motor_d+wall_t, h=floor_t)
+        // Hole in floor for drone feet
         align(BOTTOM,RIGHT) {
             left(wall_t/2) up(floor_t+0.1)
-            tag("remove") zcyl(d=foot_hole_d, h=floor_t+0.2);
+            tag("remove") yscale(1.5)zcyl(d=foot_hole_d, h=floor_t+0.2);
         }
     }
     align(LEFT){
