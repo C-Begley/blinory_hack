@@ -36,8 +36,10 @@ guard_beam_l = prop_r - motor_d/2 - wall_t + guard_beam_t + prop_margin;
 cheatval = 6;   //I honestly don't know why I needed this.
                 // I can't mathz
 
-text_shift = prop_r/2;
+text_shift = prop_r/3;
 textdepth = 1.5;
+
+enable_text = true;
 
 
 diff()
@@ -54,9 +56,13 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
         zrot(i * guard_angle/2) align(RIGHT, TOP)
             cuboid([guard_beam_l, guard_beam_t, guard_beam_t]){
                 align(TOP,RIGHT) cuboid([wall_t, guard_beam_t, prop_h]);
-                tag("remove") color("red") position(TOP) down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
-                left(text_shift) linear_extrude(textdepth)
-                    text("REDWIRE SPACE / J-CLAW", size=guard_beam_t*0.8);
+                if (enable_text){
+                    tag("remove") color("red") position(TOP)
+                    down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
+                    left(text_shift) linear_extrude(textdepth)
+                        text("REDWIRE SPACE", size=guard_beam_t*0.8);
+
+                }
             }
     }
     // Outer arc
