@@ -20,7 +20,7 @@ SAVE = False #Very heavy and slow process! Disable when running with Drone!
 DRAW = True
 
 #TODO: currently this is set in main, which we won't have access to when using it as a lib.
-frame_dimensions = (0,0)
+frame_dimensions = None
 
 class PredictionCertainty(Enum):
     CERTAIN = 1,                # 4 hoop segments: prediction can be relied on
