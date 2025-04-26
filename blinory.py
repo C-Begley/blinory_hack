@@ -12,7 +12,7 @@ CODE_STOP = 0x2
 COMMAND_SEND_N = 21
 COMMAND_SEND_DELTA = 0.049
 
-VERBOSE = False
+VERBOSE = True
 VVERBOSE = False
 
 
@@ -72,7 +72,7 @@ class Drone:
             print(f"Change throttle: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(throttle=v))
-            sleep(COMMAND_SEND_DELTA)
+            # sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
     def control_roll(self, v=128):
@@ -80,7 +80,7 @@ class Drone:
             print(f"Roll: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(roll=v))
-            sleep(COMMAND_SEND_DELTA)
+            # sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
     def control_pitch(self, v=128):
@@ -88,7 +88,7 @@ class Drone:
             print(f"Pitch: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(pich=v))
-            sleep(COMMAND_SEND_DELTA)
+            # sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
     def control_yaw(self, v=128):
@@ -96,7 +96,7 @@ class Drone:
             print(f"Pitch: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(yaw=v))
-            sleep(COMMAND_SEND_DELTA)
+            # sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
 

@@ -36,7 +36,7 @@ class Slider:
         self.snap_back = snap_back
         self.knob_d = 8
         self.initial_value = 0 if init_centered else min_val
-        self.action=None
+        self.action=action
 
         # Create rect based on orientation
         if self.orientation == 'horizontal':
