@@ -54,6 +54,7 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     // guard beams
     for(i = [-1, 1]){
         zrot(i * guard_angle/2) align(RIGHT, TOP)
+            left(0.3)//Snug fit of cuboid to round surface of tube
             cuboid([guard_beam_l, guard_beam_t, guard_beam_t]){
                 align(TOP,RIGHT) cuboid([wall_t, guard_beam_t, prop_h]);
                 if (enable_text){
@@ -67,6 +68,7 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     }
     // Outer arc
     for(a = [-guard_angle/2 - cheatval:1:guard_angle/2 +cheatval]){
+        left(0.3)//Move together with beam
         align(RIGHT, TOP) zrot(a)up(prop_h) right(guard_beam_l)  cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
     }
 }
