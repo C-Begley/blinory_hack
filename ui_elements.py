@@ -94,6 +94,7 @@ class Slider:
         """Reset slider to its initial position"""
         self.value = self.initial_value
         self.update_handle_from_value()
+        self.do_action()
 
     def do_action(self):
         if self.action:

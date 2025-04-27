@@ -13,6 +13,14 @@ CODE_STOP = 0x2
 COMMAND_SEND_N = 21
 COMMAND_SEND_DELTA = 0.049
 
+
+ROLL_INDEX = 2
+PITCH_INDEX = 3
+THROTTLE_INDEX = 4
+YAW_INDEX = 5
+CMD_INDEX = 6
+CRC_INDEX = 18
+
 VERBOSE = True
 VVERBOSE = False
 
@@ -25,7 +33,14 @@ class Drone:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.active = False
         self.msg_thread = Thread(target=self.message_send_task, args=(10,))
-        self.msg_queue = []
+        # self.msg_queue = Queue()
+
+        self.throttle_val = 0
+        self.pitch_val = 128
+        self.roll_val = 128
+        self.yaw_val = 128
+
+        self.pause_idle = False #Stop sending idle commands during commands
 
     def __del__(self):
         self.active = False
@@ -40,13 +55,52 @@ class Drone:
 
     def deactivate(self):
         self.active = False
-        self.msg_thread.join()
+        try:
+            self.msg_thread.join()
+        except RuntimeError as e:
+            print("Couldn't stop thread: wasn't running?")
 
     def message_send_task(self, arg):
         while self.active:
-            if not self.msg_queue:
-                self.send_msg(BASE_MSG) #IDLE
+            if not self.pause_idle:
+                # if not self.msg_queue.empty():
+                    #These always have priority over scalar commands
+                    # and will block them for a full second
+                    # for _ in range(COMMAND_SEND_N):
+                    #     self.send_msg(self.craft_msg(cmd=self.msg_queue.get(block=False)))
+                    #     sleep(COMMAND_SEND_DELTA)
+                    #TODO: I wonder, can't we just send them outside of the thread directly?
+                    #      Or will this interfer with the commands sent inside of the thread?
+                    # pass
+                # else:
+                self.send_msg(self.craft_msg(throttle=self.throttle_val,
+                                             roll=self.roll_val,
+                                             pitch=self.pitch_val,
+                                             yaw=self.yaw_val))
+
+
+
             sleep(COMMAND_SEND_DELTA)
+
+    #TODO: Formulas aren't perfect yet, but I'm too lazy4mathz
+    # 0 - 100 --> 0 - 255
+    def set_throttle(self, val):
+        #TODO: Which one is it? How does it work?
+        # drone.control_throttle(int(val*2.55))
+        self.throttle_val = int((val*1.25)+125)
+
+    # -100 - +100 --> 0 - 255
+    def set_pitch(self, val):
+        self.pitch_val = int((val*1.25)+125)
+
+    # -100 - +100 --> 0 - 255
+    def set_roll(self, val):
+        self.roll_val = int((val*1.25)+125)
+
+    # -100 - +100 --> 0 - 255
+    def set_yaw(self, val):
+        self.yaw_val = int((val*1.25)+125)
+
 
     def send_msg(self, data):
         if VVERBOSE:
@@ -55,34 +109,40 @@ class Drone:
 
     def craft_msg(self, cmd=0, roll=0x80, pitch=0x80, throttle=0x80, yaw=0x80):
         msg = BASE_MSG
-        msg[2] = roll
-        msg[3] = pitch
-        msg[4] = throttle
-        msg[5] = yaw
-        msg[6] = cmd
-        msg[18] = reduce(xor, msg[2:17])
+        msg[ROLL_INDEX]     = roll
+        msg[PITCH_INDEX]    = pitch
+        msg[THROTTLE_INDEX] = throttle
+        msg[YAW_INDEX]      = yaw
+        msg[CMD_INDEX]      = cmd
+        msg[CRC_INDEX]      = reduce(xor, msg[2:17])
         return msg
 
     def lift_off(self):
         if VERBOSE:
             print("Lift off")
+        self.pause_idle = True
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(cmd=CODE_LIFT_OFF))
             sleep(COMMAND_SEND_DELTA)
+        self.pause_idle = False
 
     def land(self):
         if VERBOSE:
             print("Land")
+        self.pause_idle = True
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(cmd=CODE_LAND))
             sleep(COMMAND_SEND_DELTA)
+        self.pause_idle = False
 
     def emergency_stop(self):
         if VERBOSE:
             print("Emergency_stop")
+        self.pause_idle = True
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(cmd=CODE_STOP))
             sleep(COMMAND_SEND_DELTA)
+        self.pause_idle = False
 
     def send_idle(self):
         self.send_msg(self.craft_msg())
@@ -93,12 +153,13 @@ class Drone:
     """
     #TODO:  I guess we could improve this interface towards the user so that
     #       a more user friendly value can be passed (e.g. -100 to +100)
+    #TODO: Or just remove them. They will be deprecated
     def control_throttle(self, v=128):
         if VERBOSE:
             print(f"Change throttle: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(throttle=v))
-            # sleep(COMMAND_SEND_DELTA)
+            sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
     def control_roll(self, v=128):
@@ -106,7 +167,7 @@ class Drone:
             print(f"Roll: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(roll=v))
-            # sleep(COMMAND_SEND_DELTA)
+            sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
     def control_pitch(self, v=128):
@@ -114,7 +175,7 @@ class Drone:
             print(f"Pitch: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(pitch=v))
-            # sleep(COMMAND_SEND_DELTA)
+            sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
     def control_yaw(self, v=128):
@@ -122,7 +183,7 @@ class Drone:
             print(f"Yaw: {v}")
         for _ in range(COMMAND_SEND_N):
             self.send_msg(self.craft_msg(yaw=v))
-            # sleep(COMMAND_SEND_DELTA)
+            sleep(COMMAND_SEND_DELTA)
         self.send_idle()
 
 
