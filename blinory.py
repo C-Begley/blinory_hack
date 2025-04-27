@@ -35,7 +35,7 @@ class Drone:
         self.msg_thread = Thread(target=self.message_send_task, args=(10,))
         # self.msg_queue = Queue()
 
-        self.throttle_val = 0
+        self.throttle_val = 128
         self.pitch_val = 128
         self.roll_val = 128
         self.yaw_val = 128
