@@ -16,6 +16,8 @@ WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
+KEYBOARD_PRESS_WEIGHT = 20
+
 def exit():
     global running
     drone.deactivate()
@@ -95,21 +97,29 @@ while running:
                 case pygame.K_ESCAPE:
                     drone.emergency_stop()
                 case pygame.K_r:
-                    drone.set_throttle(20)
+                    drone.set_throttle(KEYBOARD_PRESS_WEIGHT)
+                    sliders[0].set_value(KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_f:
-                    drone.set_throttle(-20)
+                    drone.set_throttle(-KEYBOARD_PRESS_WEIGHT)
+                    sliders[0].set_value(-KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_a:
-                    drone.set_roll(-20)
+                    drone.set_roll(-KEYBOARD_PRESS_WEIGHT)
+                    sliders[3].set_value(-KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_d:
-                    drone.set_roll(20)
+                    drone.set_roll(KEYBOARD_PRESS_WEIGHT)
+                    sliders[3].set_value(KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_w:
-                    drone.set_pitch(-20)
+                    drone.set_pitch(-KEYBOARD_PRESS_WEIGHT)
+                    sliders[1].set_value(-KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_s:
-                    drone.set_pitch(20)
+                    drone.set_pitch(KEYBOARD_PRESS_WEIGHT)
+                    sliders[1].set_value(KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_q:
-                    drone.set_yaw(-20)
+                    drone.set_yaw(-KEYBOARD_PRESS_WEIGHT)
+                    sliders[2].set_value(-KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_e:
-                    drone.set_yaw(20)
+                    drone.set_yaw(KEYBOARD_PRESS_WEIGHT)
+                    sliders[2].set_value(KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_RETURN:
                     drone.lift_off()
                 case pygame.K_BACKSPACE:
@@ -118,20 +128,28 @@ while running:
             match event.key:
                 case pygame.K_r:
                     drone.set_throttle(0)
+                    sliders[0].set_value(0)
                 case pygame.K_f:
                     drone.set_throttle(0)
+                    sliders[0].set_value(0)
                 case pygame.K_a:
                     drone.set_roll(0)
+                    sliders[3].set_value(0)
                 case pygame.K_d:
                     drone.set_roll(0)
+                    sliders[3].set_value(0)
                 case pygame.K_w:
                     drone.set_pitch(0)
+                    sliders[1].set_value(0)
                 case pygame.K_s:
                     drone.set_pitch(0)
+                    sliders[1].set_value(0)
                 case pygame.K_q:
                     drone.set_yaw(0)
+                    sliders[2].set_value(0)
                 case pygame.K_e:
                     drone.set_yaw(0)
+                    sliders[2].set_value(0)
 
     # Draw UI elements
     for btn in buttons:

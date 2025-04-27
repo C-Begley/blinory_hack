@@ -75,6 +75,10 @@ class Slider:
         text = font.render(f"{self.label}: {int(self.value)}", True, BLACK)
         surface.blit(text, (self.rect.x, self.rect.y - 30))
 
+    def set_value(self, val):
+        self.value = val
+        self.update_handle_from_value()
+
     def update_value(self, pos):
         if self.orientation == 'horizontal':
             self.handle_rect.x = max(self.rect.x,
