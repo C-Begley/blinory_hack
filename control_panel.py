@@ -16,7 +16,7 @@ WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
-KEYBOARD_PRESS_WEIGHT = 20
+KEYBOARD_PRESS_WEIGHT = 60
 
 def exit():
     global running
