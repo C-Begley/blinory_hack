@@ -109,11 +109,11 @@ while running:
                     drone.set_roll(KEYBOARD_PRESS_WEIGHT)
                     sliders[3].set_value(KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_w:
-                    drone.set_pitch(-KEYBOARD_PRESS_WEIGHT)
-                    sliders[1].set_value(-KEYBOARD_PRESS_WEIGHT)
-                case pygame.K_s:
                     drone.set_pitch(KEYBOARD_PRESS_WEIGHT)
                     sliders[1].set_value(KEYBOARD_PRESS_WEIGHT)
+                case pygame.K_s:
+                    drone.set_pitch(-KEYBOARD_PRESS_WEIGHT)
+                    sliders[1].set_value(-KEYBOARD_PRESS_WEIGHT)
                 case pygame.K_q:
                     drone.set_yaw(-KEYBOARD_PRESS_WEIGHT)
                     sliders[2].set_value(-KEYBOARD_PRESS_WEIGHT)
