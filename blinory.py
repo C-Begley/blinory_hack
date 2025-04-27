@@ -2,6 +2,7 @@ import socket
 import sys
 from functools import reduce
 from operator import xor
+from threading import Thread
 from time import sleep
 
 BASE_MSG = [ 0x66, 0x14, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, \
@@ -22,6 +23,31 @@ class Drone:
         self.drone_ip = "192.168.0.1"
         self.drone_port = 50000
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.active = False
+        self.msg_thread = Thread(target=self.message_send_task, args=(10,))
+        self.msg_queue = []
+
+    def __del__(self):
+        self.active = False
+        try:
+            self.msg_thread.join()
+        except RuntimeError as e:
+            print("Couldn't stop thread: wasn't running?")
+
+    def activate(self):
+        self.active = True
+        self.msg_thread.start()
+
+    def deactivate(self):
+        self.active = False
+        self.msg_thread.join()
+
+    def message_send_task(self, arg):
+        while self.active:
+            if not self.msg_queue:
+                self.send_msg(BASE_MSG) #IDLE
+            sleep(COMMAND_SEND_DELTA)
+
     def send_msg(self, data):
         if VVERBOSE:
             print(" ".join(hex(n) for n in data))

@@ -30,8 +30,9 @@ def drone_roll(val):
 def drone_yaw(val):
     drone.control_yaw(int(val+125))
 
-def stop_ui():
+def exit():
     global running
+    drone.deactivate()
     running = False
 
 drone = Drone()
@@ -41,7 +42,8 @@ buttons = [
     Button(50, 50, 120, 40, "Lift Off", GREEN, action=drone.lift_off),
     Button(200, 50, 120, 40, "Land", RED, action=drone.land),
     Button(350, 50, 200, 40, "Emergency Stop", RED, action=drone.emergency_stop),
-    Button(600, 50, 120, 40, "Exit", BLUE, action=stop_ui),
+    Button(600, 50, 120, 40, "Exit", BLUE, action=exit),
+    Button(50, 100, 120, 40, "Activate", GREEN, action=drone.activate),
 ]
 
 sliders = [
