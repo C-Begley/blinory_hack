@@ -125,6 +125,7 @@ class Drone:
             self.send_msg(self.craft_msg(cmd=CODE_LIFT_OFF))
             sleep(COMMAND_SEND_DELTA)
         self.pause_idle = False
+        self.activate()
 
     def land(self):
         if VERBOSE:
@@ -134,6 +135,7 @@ class Drone:
             self.send_msg(self.craft_msg(cmd=CODE_LAND))
             sleep(COMMAND_SEND_DELTA)
         self.pause_idle = False
+        self.deactivate()
 
     def emergency_stop(self):
         if VERBOSE:
@@ -143,6 +145,7 @@ class Drone:
             self.send_msg(self.craft_msg(cmd=CODE_STOP))
             sleep(COMMAND_SEND_DELTA)
         self.pause_idle = False
+        self.deactivate()
 
     def send_idle(self):
         self.send_msg(self.craft_msg())
