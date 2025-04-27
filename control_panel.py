@@ -16,20 +16,6 @@ WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
-def drone_throttle(val):
-    #TODO: Which one is it? How does it work?
-    # drone.control_throttle(int(val*2.55))
-    drone.control_throttle(int(val+125))
-
-def drone_pitch(val):
-    drone.control_pitch(int(val+125))
-
-def drone_roll(val):
-    drone.control_roll(int(val+125))
-
-def drone_yaw(val):
-    drone.control_yaw(int(val+125))
-
 def exit():
     global running
     drone.deactivate()
@@ -47,14 +33,15 @@ buttons = [
 ]
 
 sliders = [
+    #TODO: It's still not entirely clear whether Throttle should be 0 - 100, or -125 - +125
     Slider(50, 200, 200, -100, 100, "Throttle", orientation='vertical',
-           init_centered=True, snap_back=True, action=drone_throttle),
+           init_centered=True, snap_back=True, action=drone.set_throttle),
     Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True,
-           snap_back=True, action=drone_pitch),
+           snap_back=True, action=drone.set_pitch),
     Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True,
-           action=drone_yaw),
+           action=drone.set_yaw),
     Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True,
-           action=drone_roll),
+           action=drone.set_roll),
 ]
 
 
@@ -97,6 +84,10 @@ while running:
                 current_slider.update_value(event.pos)
                 # Add real-time controls here
                 current_slider.do_action()
+        #TODO: instead of relying on KEYUP and KEYDON events,
+        #       I'd say it's way more reliable to just check if a key is pressed in a loop
+        #       and set status based on that
+        #TODO: Ideally, the sliders also reflect what's going on here.
         elif event.type == pygame.KEYDOWN:
             match event.key:
                 case pygame.K_SPACE:
@@ -104,25 +95,43 @@ while running:
                 case pygame.K_ESCAPE:
                     drone.emergency_stop()
                 case pygame.K_r:
-                    drone_throttle(20)
+                    drone.set_throttle(20)
                 case pygame.K_f:
-                    drone_throttle(-20)
+                    drone.set_throttle(-20)
                 case pygame.K_a:
-                    drone_roll(-20)
+                    drone.set_roll(-20)
                 case pygame.K_d:
-                    drone_roll(20)
+                    drone.set_roll(20)
                 case pygame.K_w:
-                    drone_pitch(-20)
+                    drone.set_pitch(-20)
                 case pygame.K_s:
-                    drone_pitch(20)
+                    drone.set_pitch(20)
                 case pygame.K_q:
-                    drone_yaw(-20)
+                    drone.set_yaw(-20)
                 case pygame.K_e:
-                    drone_yaw(20)
+                    drone.set_yaw(20)
                 case pygame.K_RETURN:
                     drone.lift_off()
                 case pygame.K_BACKSPACE:
                     drone.land()
+        elif event.type == pygame.KEYUP:
+            match event.key:
+                case pygame.K_r:
+                    drone.set_throttle(0)
+                case pygame.K_f:
+                    drone.set_throttle(0)
+                case pygame.K_a:
+                    drone.set_roll(0)
+                case pygame.K_d:
+                    drone.set_roll(0)
+                case pygame.K_w:
+                    drone.set_pitch(0)
+                case pygame.K_s:
+                    drone.set_pitch(0)
+                case pygame.K_q:
+                    drone.set_yaw(0)
+                case pygame.K_e:
+                    drone.set_yaw(0)
 
     # Draw UI elements
     for btn in buttons:
