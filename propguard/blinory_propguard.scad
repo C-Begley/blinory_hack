@@ -30,16 +30,15 @@ sf = 0.5;       // Shrink fit
 prop_h = 14;   // Extra height of prop above motor_h
 prop_r = 65;    // length of prop measured from center of motor
 prop_margin = 8;// Safety margin
-guard_angle = 90;
+guard_angle = 140;
+guard_beam_n = 3;
 guard_beam_t = wall_t;
 guard_beam_l = prop_r - motor_d/2 - wall_t + guard_beam_t + prop_margin;
 guard_beam_knee = prop_h;
-cheatval = 6;   //I honestly don't know why I needed this.
-                // I can't mathz
 
 text_shift = prop_r/3;
 textdepth = 1.5;
-enable_text = true;
+enable_text = false;
 
 foot_hole_d = 10;
 
@@ -62,13 +61,13 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     }
 
     // guard beams
-    for(i = [-1, 1]){
-        zrot(i * guard_angle/2) align(RIGHT, TOP)
+    for(i = [-guard_angle/2:guard_angle/(guard_beam_n-1):guard_angle/2]){
+        zrot(i) align(RIGHT, TOP)
             left(0.3)//Snug fit of cuboid to round surface of tube
             cuboid([guard_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
                 // Make tip of beam an angle.
                 //TODO: I'm not proud of this implementation. There has to be a better way.
-                n_seg = 50;
+                n_seg = 40;
                 align(RIGHT)
                 left(guard_beam_t)
                 for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
@@ -85,9 +84,10 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
             }
     }
     // Outer arc
-    for(a = [-guard_angle/2 - cheatval:1:guard_angle/2 +cheatval]){
+    for(a = [-guard_angle/2-0.5 :1: guard_angle/2+0.5]){
         left(0.3)//Move together with beam
-        align(RIGHT, TOP) zrot(a)up(prop_h) right(guard_beam_l)  cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
+        align(TOP) zrot(a)up(prop_h) right(guard_beam_l + guard_beam_knee - guard_beam_t)
+            cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
     }
 }
 
