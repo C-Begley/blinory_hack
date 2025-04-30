@@ -33,6 +33,7 @@ prop_margin = 8;// Safety margin
 guard_angle = 90;
 guard_beam_t = wall_t;
 guard_beam_l = prop_r - motor_d/2 - wall_t + guard_beam_t + prop_margin;
+guard_beam_knee = prop_h;
 cheatval = 6;   //I honestly don't know why I needed this.
                 // I can't mathz
 
@@ -42,6 +43,7 @@ enable_text = true;
 
 foot_hole_d = 10;
 
+$align_msg=false;
 
 diff()
 tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
@@ -63,8 +65,16 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     for(i = [-1, 1]){
         zrot(i * guard_angle/2) align(RIGHT, TOP)
             left(0.3)//Snug fit of cuboid to round surface of tube
-            cuboid([guard_beam_l, guard_beam_t, guard_beam_t]){
-                align(TOP,RIGHT) cuboid([wall_t, guard_beam_t, prop_h]);
+            cuboid([guard_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
+                // Make tip of beam an angle.
+                //TODO: I'm not proud of this implementation. There has to be a better way.
+                n_seg = 50;
+                align(RIGHT)
+                left(guard_beam_t)
+                for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
+                {
+                    move([x,0,(x*x*x)/(guard_beam_knee*guard_beam_knee)]) cuboid([guard_beam_t, guard_beam_t, guard_beam_t]);
+                }
                 if (enable_text){
                     tag("remove") color("red") position(TOP)
                     down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
