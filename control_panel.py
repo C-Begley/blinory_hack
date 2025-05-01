@@ -75,6 +75,7 @@ def process_stream():
     #TODO: error catching for when drone was not on
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
+    prev_correct_cmd = False    # True means that we have sent out a correction to the drone
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
@@ -92,15 +93,17 @@ def process_stream():
                 frame, suggested_correction = hoop_detector.process_frame(frame)
                 set_stream_surface(frame)
                 if hoop_flying_enabled:
-                    if suggested_correction == None:
+                    if suggested_correction == None and prev_correct_cmd:
                         print("all to 0: ")
                         drone.set_roll(0)
                         drone.set_throttle(0)
+                        prev_correct_cmd = False
                     else:
                         print("Setting_roll: ", suggested_correction[0])
                         drone.set_roll(suggested_correction[0])
                         print("Setting_throttle: ", suggested_correction[1])
                         drone.set_throttle(suggested_correction[1])
+                        prev_correct_cmd = True
 
 
 
