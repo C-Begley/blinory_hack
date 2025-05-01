@@ -9,12 +9,16 @@ from vidgear.gears import WriteGear #Used this one instead of OpenCV's write fun
                                     #Because the latter didn't work for me.
 from scipy.spatial.distance import cdist
 
-red_hsv_lower = np.array([0, 50, 50])
-red_hsv_upper = np.array([10, 255, 255])
-orange_hsv_lower = np.array([5, 160, 100])
-orange_hsv_upper = np.array([50, 255, 255])
+red_hsv_lower1 = np.array([0, 50, 75])     # V 200 works if no sun in lens. 75 is pretty extreme
+red_hsv_upper1 = np.array([30, 255, 255])
+red_hsv_lower2 = np.array([110, 50, 100])
+red_hsv_upper2 = np.array([160, 255, 255])
+# orange_hsv_lower = np.array([5, 160, 100])
+# orange_hsv_upper = np.array([50, 255, 255])
 blue_hsv_lower = np.array([100, 40, 30])
 blue_hsv_upper = np.array([125, 255, 150])
+
+#TODO: Maybe define different (more narrow) ranges, for different light settings?
 
 # TODO: --> args?
 MODE = "cam"
@@ -114,7 +118,10 @@ def calculate_rotation_angle(points):
 def mask_frame(frame):
 # mask = cv2.inRange(frame_hsv, red_hsv_lower, red_hsv_upper)
     # mask = cv2.inRange(frame, blue_hsv_lower, blue_hsv_upper)
-    mask = cv2.inRange(frame, orange_hsv_lower, orange_hsv_upper)   #TODO: make selectable
+    mask1 = cv2.inRange(frame, red_hsv_lower1, red_hsv_upper1)   #TODO: make selectable
+    mask2 = cv2.inRange(frame, red_hsv_lower2, red_hsv_upper2)   #TODO: make selectable
+    mask = mask1 | mask2
+
 
     mask_corrected = mask
 
@@ -223,6 +230,7 @@ def process_frame(frame):
 
     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = mask_frame(frame_hsv)
+    # cv2.imshow("Mask", make_size_reasonable(mask))
     output_contours, rectlist, anglelist = contour_detection(mask, frame)
     if rectlist:
         inliers, outliers, inliers_rects, outliers_rects, angle_inliers, angle_outliers \
