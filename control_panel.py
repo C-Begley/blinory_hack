@@ -63,8 +63,7 @@ sliders = [
 
 def set_stream_surface(frame):
     global stream_surface
-    # frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR
-    #   Already done in hoop_detector now? TODO: confirm and remove
+    frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR -> Convert back to RGB for Pygame
     frame = np.rot90(frame) #Why is this suddenly necessary? Wasn't needed before?
     frame = pygame.surfarray.make_surface(frame)
     #NOTE: stream aspect ratio = 1.7777
@@ -92,7 +91,6 @@ def process_stream():
                 frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
                 frame, suggested_correction = hoop_detector.process_frame(frame)
                 set_stream_surface(frame)
-                print(suggested_correction)
                 if hoop_flying_enabled:
                     if suggested_correction == None:
                         print("all to 0: ")
