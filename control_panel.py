@@ -95,10 +95,13 @@ def process_stream():
                 print(suggested_correction)
                 if hoop_flying_enabled:
                     if suggested_correction == None:
+                        print("all to 0: ")
                         drone.set_roll(0)
                         drone.set_throttle(0)
                     else:
+                        print("Setting_roll: ", suggested_correction[0])
                         drone.set_roll(suggested_correction[0])
+                        print("Setting_throttle: ", suggested_correction[1])
                         drone.set_throttle(suggested_correction[1])
 
 
