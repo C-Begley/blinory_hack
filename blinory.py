@@ -51,7 +51,11 @@ class Drone:
 
     def activate(self):
         self.active = True
-        self.msg_thread.start()
+        try:
+            self.msg_thread.start()
+        except:
+            print("Tried starting a new Blinory thread while it was already running?")
+        #TODO: is this safe? What happens if we start a new thread while we were trying to stop?
 
     def deactivate(self):
         self.active = False
