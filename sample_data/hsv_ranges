@@ -1,0 +1,31 @@
+Color ranges found by manually testing images in HsvRangeTool.
+
+orange_outside_shadow.png
+Upper HSV:  (179, 255, 255)
+Lower HSV:  (174, 150, 82)
+(shows outer edges)
++
+Upper HSV:  (4, 255, 252)
+Lower HSV:  (0, 195, 237)
+(Shows majority)
+
+orange_outside_shadow2.png
+Upper HSV:  (179, 204, 255)
+Lower HSV:  (174, 166, 237)
++
+Upper HSV:  (2, 255, 245)
+Lower HSV:  (0, 219, 241)
+
+orange_outside_shadow_sun.png
+Upper HSV:  (179, 186, 255)
+Lower HSV:  (164, 163, 180)
++
+Upper HSV:  (5, 255, 249)
+Lower HSV:  (0, 225, 241)
+
+orange_outside_shadow_sun2.png
+Upper HSV:  (4, 255, 255)
+Lower HSV:  (0, 204, 235)
++
+Upper HSV:  (179, 255, 243)
+Lower HSV:  (175, 156, 210)
