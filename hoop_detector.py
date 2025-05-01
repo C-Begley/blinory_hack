@@ -146,7 +146,7 @@ def contour_detection(mask, frame):
         #TODO:  make filtering more agressive again.
         #       currently we have to lower it, because the fire extinguisher on the sample
         #       image has a tiny blue line that connects with the hoop...
-        if ar > 1.8 and ar < 5:
+        if ar > 1.8 and ar < 8:
             ang = calculate_rotation_angle(box)
             if (35 <= ang <= 55) or (125 <= ang <= 145):
                 contourlist.append(c)
