@@ -15,7 +15,7 @@ blue_hsv_lower = np.array([100, 40, 30])
 blue_hsv_upper = np.array([125, 255, 150])
 
 # TODO: --> args?
-MODE = "video"
+MODE = "cam"
 SAVE = False #Very heavy and slow process! Disable when running with Drone!
 DRAW = True
 
@@ -400,6 +400,46 @@ def main():
         cap.release()
         if SAVE:
             out.close()
+    elif MODE == "cam":
+        import pylwdrone
+        import h264decoder
+        drone_stream = pylwdrone.LWDrone()
+        decoder = h264decoder.H264Decoder()
+        set_frame_dimensions((2048, 1142))
+        if SAVE:
+            output_params = {"-vcodec":"libx264", "-crf": 0, "-preset": "fast"}
+            out = WriteGear(output='output.mp4', compression_mode=True, logging=False, **output_params)
+        for _frame in drone_stream.start_video_stream():
+            framedatas=decoder.decode(bytes(_frame.frame_bytes))
+            for framedata in framedatas:
+                (frame, w, h, ls) = framedata
+                if frame is not None:
+                    frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
+                    frame = frame.reshape((h, ls//3, 3))
+                    frame = frame[:,:w,:]
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  #TODO: make more efficient
+                                                                    # by not doing 2 conversions
+                    output, suggested_correction= process_frame(frame)
+                    key = cv2.waitKey(1)
+                    if key == ord(' '):
+                        while True:
+                            key = cv2.waitKey(1)
+                            sleep(0.1)
+                            if key == ord(' ') or key == ord('q'):
+                                break
+
+                    if key == ord('q'):
+                        break
+                    if SAVE:
+                        out.write(output)
+                    cv2.imshow("Countours", make_size_reasonable(output))
+        cap.release()
+        if SAVE:
+            out.close()
+
+
+
+
     else:
         print("Unknown mode!")
         exit(0)
