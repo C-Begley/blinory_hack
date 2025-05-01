@@ -1,7 +1,18 @@
+import cv2  #TODO: restrict? Maybe not even needed if we go through the hoop_detector?
+import h264decoder  #Note: this one had to be installed manually!
+                    #       https://github.com/DaWelter/h264decoder
+                    #       It also proved to be a challenge on Arch, because it's semi-broken
+                    #       - Manually install pyBind11 through Pacman
+                    #       - Manually run the TWO Cmake commands that failed
+                    #           - Note that for the second command,
+                    #             it's best to drop the last arguments. (c.f.r README)
+import numpy as np
 import pygame
+import pylwdrone
 import sys
 
 from blinory import Drone
+from threading import Thread
 from ui_colors import *
 from ui_elements import Button, Slider
 
@@ -17,6 +28,8 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
 KEYBOARD_PRESS_WEIGHT = 60
+
+stream_surface = None  #Used as a way to pass the stream to a different thread
 
 def exit():
     global running
@@ -46,10 +59,38 @@ sliders = [
            action=drone.set_roll),
 ]
 
+def set_stream_surface(frame):
+    global stream_surface
+    frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR
+    frame = pygame.surfarray.make_surface(frame)
+    #NOTE: stream aspect ratio = 1.7777
+    frame = pygame.transform.scale(frame, (500,282))
+    stream_surface = frame
+
+def process_stream():
+    drone_stream = pylwdrone.LWDrone()
+    #TODO: error catching for when drone was not on
+    decoder = h264decoder.H264Decoder()
+    for _frame in drone_stream.start_video_stream():
+        if not running:
+            break
+        framedatas=decoder.decode(bytes(_frame.frame_bytes))
+        for framedata in framedatas:
+            (frame, w, h, ls) = framedata
+            if frame is not None:
+                frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
+                frame = frame.reshape((h, ls//3, 3))
+                frame = frame[:,:w,:]
+                set_stream_surface(frame)
+
 
 # Main loop
 running = True
 current_slider = None
+
+stream_thread = Thread(target=process_stream, args=())
+stream_thread.start()
+
 
 while running:
     screen.fill(WHITE)
@@ -158,8 +199,14 @@ while running:
     for slider in sliders:
         slider.draw(screen)
 
+    if stream_surface:
+        #TODO: I'd like these coords to be better defined. Maybe relative to the UI lements.
+        #       On top of that: I'd also like to have the stream in its own UI-element class.
+        screen.blit(stream_surface, (275, 150))
+
     pygame.display.flip()
 
+stream_thread.join()
 pygame.quit()
 sys.exit()
 
