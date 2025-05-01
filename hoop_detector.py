@@ -11,6 +11,8 @@ from scipy.spatial.distance import cdist
 
 red_hsv_lower = np.array([0, 50, 50])
 red_hsv_upper = np.array([10, 255, 255])
+orange_hsv_lower = np.array([5, 160, 100])
+orange_hsv_upper = np.array([50, 255, 255])
 blue_hsv_lower = np.array([100, 40, 30])
 blue_hsv_upper = np.array([125, 255, 150])
 
@@ -111,7 +113,8 @@ def calculate_rotation_angle(points):
 
 def mask_frame(frame):
 # mask = cv2.inRange(frame_hsv, red_hsv_lower, red_hsv_upper)
-    mask = cv2.inRange(frame, blue_hsv_lower, blue_hsv_upper)
+    # mask = cv2.inRange(frame, blue_hsv_lower, blue_hsv_upper)
+    mask = cv2.inRange(frame, orange_hsv_lower, orange_hsv_upper)   #TODO: make selectable
 
     mask_corrected = mask
 
