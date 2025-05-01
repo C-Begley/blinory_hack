@@ -408,7 +408,7 @@ def main():
         import h264decoder
         drone_stream = pylwdrone.LWDrone()
         decoder = h264decoder.H264Decoder()
-        set_frame_dimensions((2048, 1142))
+        set_frame_dimensions((1152, 2048))
         if SAVE:
             output_params = {"-vcodec":"libx264", "-crf": 0, "-preset": "fast"}
             out = WriteGear(output='output.mp4', compression_mode=True, logging=False, **output_params)
