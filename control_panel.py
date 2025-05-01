@@ -73,7 +73,7 @@ def process_stream():
     drone_stream = pylwdrone.LWDrone()
     #TODO: error catching for when drone was not on
     decoder = h264decoder.H264Decoder()
-    hoop_detector.set_frame_dimensions((2048, 1142))
+    hoop_detector.set_frame_dimensions((1152, 2048))
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
