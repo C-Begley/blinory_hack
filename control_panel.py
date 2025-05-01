@@ -6,6 +6,7 @@ import h264decoder  #Note: this one had to be installed manually!
                     #       - Manually run the TWO Cmake commands that failed
                     #           - Note that for the second command,
                     #             it's best to drop the last arguments. (c.f.r README)
+import hoop_detector
 import numpy as np
 import pygame
 import pylwdrone
@@ -30,6 +31,7 @@ pygame.display.set_caption("Drone Controller")
 KEYBOARD_PRESS_WEIGHT = 60
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
+hoop_flying_enabled = False
 
 def exit():
     global running
@@ -71,6 +73,7 @@ def process_stream():
     drone_stream = pylwdrone.LWDrone()
     #TODO: error catching for when drone was not on
     decoder = h264decoder.H264Decoder()
+    hoop_detector.set_frame_dimensions((2048, 1142))
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
@@ -81,7 +84,20 @@ def process_stream():
                 frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
                 frame = frame.reshape((h, ls//3, 3))
                 frame = frame[:,:w,:]
+                # if frame is None:
+                #     print("No frame, skipping...")
+                #     continue
+                frame, suggested_correction = hoop_detector.process_frame(frame)
                 set_stream_surface(frame)
+                print(suggested_correction)
+                if hoop_flying_enabled:
+                    if suggested_correction == None:
+                        drone.set_roll(0)
+                        drone.set_throttle(0)
+                    else:
+                        drone.set_roll(suggested_correction[0])
+                        drone.set_throttle(suggested_correction[1])
+
 
 
 # Main loop
@@ -165,6 +181,10 @@ while running:
                     drone.lift_off()
                 case pygame.K_BACKSPACE:
                     drone.land()
+                case pygame.K_h:
+                    hoop_flying_enabled = not hoop_flying_enabled
+                    print("Hoop flying: ", hoop_flying_enabled)
+                    #TODO: shop with indicator on UI? Color changing button?
         elif event.type == pygame.KEYUP:
             match event.key:
                 case pygame.K_r:
