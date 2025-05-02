@@ -12,15 +12,14 @@ import pygame
 import pylwdrone
 import sys
 
+from auto_connect import auto_connect
 from blinory import Drone
 from threading import Thread
+from time import sleep
 from ui_colors import *
 from ui_elements import Button, Slider
 
 #TODO: add one try-catch around entire program that will send an emergency stop before crashing?
-
-# Initialize Pygame
-pygame.init()
 
 # Set up the window
 WINDOW_WIDTH = 800
@@ -106,10 +105,16 @@ def process_stream():
                         prev_correct_cmd = True
 
 
+# Initialize Pygame
+pygame.init()
 
 # Main loop
 running = True
 current_slider = None
+
+if auto_connect() < 0:  #TODO: maybe make this one configurable? On/Off?
+    print("Error connecting to drone. Was it on?")
+sleep(1)
 
 stream_thread = Thread(target=process_stream, args=())
 stream_thread.start()
