@@ -39,6 +39,7 @@ def auto_connect():
             device = next((device for device in nmcli.device() if device.device == iface), None)
             if device.connection != None:
                 print(f"Successfully connected to {device.connection}")
+                return 0
             else:
                 print("Unexpected error: Connection failed")
                 return -1
