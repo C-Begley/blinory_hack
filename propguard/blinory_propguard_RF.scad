@@ -1,0 +1,126 @@
+/*
+ * Copyright (c) 2023 Wouter Symons
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+include <BOSL2/constants.scad>
+include <BOSL2/std.scad>
+include <BOSL2/transforms.scad>
+
+$fn = 60;
+
+motor_d = 20;
+motor_h = 10;
+wall_t = 4;
+leg_h = 11;
+leg_w = 10.5;
+leg_l = 30;
+floor_t = 2;
+sf = 0.5;       // Shrink fit
+prop_h = 14;   // Extra height of prop above motor_h
+prop_r = 65;    // length of prop measured from center of motor
+prop_margin = 8;// Safety margin
+guard_angle = 140;
+guard_angle_front = 35;
+guard_beam_n = 3;
+guard_beam_t = wall_t;
+guard_beam_l = prop_r - motor_d/2 - wall_t + guard_beam_t + prop_margin;
+guard_long_beam_l = guard_beam_l + 46.5;
+guard_beam_knee = prop_h;
+
+extention_front = 110;
+
+text_shift = prop_r/3;
+textdepth = 1.5;
+enable_text = false;
+
+foot_hole_d = 10;
+
+$align_msg=false;
+
+diff()
+tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
+    tag("remove") position(LEFT) right(wall_t/2) cuboid([wall_t, leg_w, leg_h+2]);
+    align(BOTTOM){
+        zcyl(d=motor_d+wall_t, h=floor_t)
+        // Hole in floor for drone feet
+        align(BOTTOM,RIGHT) {
+            left(wall_t/2) up(floor_t+0.1)
+            tag("remove") yscale(1.5)zcyl(d=foot_hole_d, h=floor_t+0.2);
+        }
+    }
+    align(LEFT){
+    right(wall_t/2) cuboid([leg_l+wall_t/2, leg_w+wall_t, leg_h]);
+    tag("remove") attach(CTR) right(wall_t/2) cuboid([leg_l+wall_t/2+1, leg_w, leg_h+1]);
+    }
+
+    // guard beams
+    for(i = [-guard_angle/2:guard_angle/(guard_beam_n-1):1]){
+        zrot(i) align(RIGHT, TOP)
+            left(0.3)//Snug fit of cuboid to round surface of tube
+            cuboid([guard_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
+                // Make tip of beam an angle.
+                //TODO: I'm not proud of this implementation. There has to be a better way.
+                n_seg = 40;
+                align(RIGHT)
+                left(guard_beam_t)
+                for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
+                {
+                    move([x,0,(x*x*x)/(guard_beam_knee*guard_beam_knee)]) cuboid([guard_beam_t, guard_beam_t, guard_beam_t]);
+                }
+                if (enable_text){
+                    tag("remove") color("red") position(TOP)
+                    down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
+                    left(text_shift) linear_extrude(textdepth)
+                        text("REDWIRE SPACE", size=guard_beam_t*0.8);
+
+                }
+            }
+    }
+    // longer guard beams
+    zrot(guard_angle/2) align(RIGHT, TOP)
+            left(0.3)//Snug fit of cuboid to round surface of tube
+            cuboid([guard_long_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
+                // Make tip of beam an angle.
+                //TODO: I'm not proud of this implementation. There has to be a better way.
+                n_seg = 40;
+                align(RIGHT)
+                left(guard_beam_t)
+                for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
+                {
+                    move([x,0,(x*x*x)/(guard_beam_knee*guard_beam_knee)]) cuboid([guard_beam_t, guard_beam_t, guard_beam_t]);
+                }
+                if (enable_text){
+                    tag("remove") color("red") position(TOP)
+                    down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
+                    left(text_shift) linear_extrude(textdepth)
+                        text("REDWIRE SPACE", size=guard_beam_t*0.8);
+
+                }
+            }
+    
+    // Outer arc
+    for(a = [-guard_angle/2-0.5 :1: guard_angle_front/2+0.5]){
+        left(0.3)//Move together with beam
+        align(TOP) zrot(a)up(prop_h) right(guard_beam_l + guard_beam_knee - guard_beam_t)
+            cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
+    }
+    //arm
+    zrot(guard_angle_front/2) align(TOP, RIGHT)
+        left(-guard_beam_l+0.3)
+        up(prop_h)
+        fwd(-extention_front/2)
+        cuboid([guard_beam_t, extention_front, guard_beam_t]);
+}
+
+
