@@ -12,6 +12,8 @@ def auto_connect():
     #TODO: Status of NetworkManager?
     #nmcli.general.status() -> General
 
+    nmcli.disable_use_sudo()
+
     device = next((device for device in nmcli.device() if device.device == iface), None)
     if device == None:
         print(f"Device {iface} not found.")
