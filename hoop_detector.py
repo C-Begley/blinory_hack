@@ -2,6 +2,7 @@ import cv2
 import imutils
 import numpy as np
 
+from auto_connect import auto_connect
 from enum import Enum
 from time import sleep
 from sklearn.cluster import KMeans
@@ -414,6 +415,9 @@ def main():
     elif MODE == "cam":
         import pylwdrone
         import h264decoder
+        if auto_connect() < 0:  #TODO: maybe make this one configurable? On/Off?
+            print("Error connecting to drone. Was it on?")
+        sleep(1)
         drone_stream = pylwdrone.LWDrone()
         decoder = h264decoder.H264Decoder()
         set_frame_dimensions((1152, 2048))
