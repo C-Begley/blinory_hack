@@ -4,6 +4,7 @@ import numpy as np
 
 from auto_connect import auto_connect
 from enum import Enum
+from functools import reduce
 from time import sleep
 from sklearn.cluster import KMeans
 from vidgear.gears import WriteGear #Used this one instead of OpenCV's write function
@@ -19,7 +20,22 @@ red_hsv_upper2 = np.array([160, 255, 255])
 blue_hsv_lower = np.array([100, 40, 30])
 blue_hsv_upper = np.array([125, 255, 150])
 
-#TODO: Maybe define different (more narrow) ranges, for different light settings?
+#TODO: overlap check?
+#TODO: use function call instead, that allows us to add some kind of "tolerance factor" for all these numbers
+# List of Tuple(list[3], list[3]))
+color_ranges_red = []
+# orange_outside_shadow.png
+color_ranges_red.append((np.array([174, 150, 82]),np.array([179, 255, 255])))
+color_ranges_red.append((np.array([0, 195, 237]), np.array([4, 255, 252])))
+# orange_outside_shadow2.png
+color_ranges_red.append((np.array([174, 166, 237]), np.array([179, 204, 255])))
+color_ranges_red.append((np.array([0, 219, 241]), np.array([2, 255, 245])))
+# orange_outside_shadow_sun.png
+color_ranges_red.append((np.array([164, 163, 180]), np.array([179, 186, 255])))
+color_ranges_red.append((np.array([0, 225, 241]), np.array([5, 255, 249])))
+# orange_outside_shadow_sun2.png
+color_ranges_red.append((np.array([0, 204, 235]), np.array([4, 255, 255])))
+color_ranges_red.append((np.array([175, 156, 210]), np.array([179, 255, 243])))
 
 # TODO: --> args?
 MODE = "cam"
@@ -119,9 +135,13 @@ def calculate_rotation_angle(points):
 def mask_frame(frame):
 # mask = cv2.inRange(frame_hsv, red_hsv_lower, red_hsv_upper)
     # mask = cv2.inRange(frame, blue_hsv_lower, blue_hsv_upper)
-    mask1 = cv2.inRange(frame, red_hsv_lower1, red_hsv_upper1)   #TODO: make selectable
-    mask2 = cv2.inRange(frame, red_hsv_lower2, red_hsv_upper2)   #TODO: make selectable
-    mask = mask1 | mask2
+    # mask1 = cv2.inRange(frame, red_hsv_lower1, red_hsv_upper1)   #TODO: make selectable
+    # mask2 = cv2.inRange(frame, red_hsv_lower2, red_hsv_upper2)   #TODO: make selectable
+    # mask = mask1 | mask2
+    masks = []
+    for color_range in color_ranges_red:
+        masks.append(cv2.inRange(frame, color_range[0], color_range[1]))
+    mask = reduce(lambda x, y: x | y, masks)
 
 
     mask_corrected = mask
