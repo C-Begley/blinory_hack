@@ -35,6 +35,13 @@ guard_beam_n = 3;
 guard_beam_t = wall_t;
 guard_beam_l = prop_r - motor_d/2 - wall_t + guard_beam_t + prop_margin;
 guard_beam_knee = prop_h;
+/* TYPE = "FRONT_LEFT"; */
+TYPE = "FRONT_RIGHT";
+/* TYPE = "BACK"; */
+guard_angle_front = 35;                     //Only for FRONT_ types
+guard_long_beam_l = guard_beam_l + 46.5;    //Only for FRONT_ types
+extension_front = 110;                      //Only for FRONT_ types
+
 
 text_shift = prop_r/3;
 textdepth = 1.5;
@@ -61,7 +68,10 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     }
 
     // guard beams
-    for(i = [-guard_angle/2:guard_angle/(guard_beam_n-1):guard_angle/2]){
+    for(i = [(TYPE=="FRONT_LEFT"?0:-guard_angle/2)
+            :guard_angle/(guard_beam_n-1)-0.01
+            :(TYPE=="FRONT_RIGHT"?1:guard_angle/2)]){
+        echo(i);
         zrot(i) align(RIGHT, TOP)
             left(0.3)//Snug fit of cuboid to round surface of tube
             cuboid([guard_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
@@ -83,11 +93,46 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
                 }
             }
     }
+    // longer guard beams
+    if (TYPE == "FRONT_LEFT" || TYPE == "FRONT_RIGHT") {
+        inverse = (TYPE=="FRONT_LEFT"?1:-1);
+        zrot(-guard_angle/2*inverse) align(RIGHT, TOP)
+                left(0.3)//Snug fit of cuboid to round surface of tube
+                cuboid([guard_long_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
+                    // Make tip of beam an angle.
+                    //TODO: I'm not proud of this implementation. There has to be a better way.
+                    n_seg = 40;
+                    align(RIGHT)
+                    left(guard_beam_t)
+                    for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
+                    {
+                        move([x,0,(x*x*x)/(guard_beam_knee*guard_beam_knee)]) cuboid([guard_beam_t, guard_beam_t, guard_beam_t]);
+                    }
+                    if (enable_text){
+                        tag("remove") color("red") position(TOP)
+                        down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
+                        left(text_shift) linear_extrude(textdepth)
+                            text("REDWIRE SPACE", size=guard_beam_t*0.8);
+
+                    }
+                }
+    }
     // Outer arc
-    for(a = [-guard_angle/2-0.5 :1: guard_angle/2+0.5]){
+    for(a = [-(TYPE=="FRONT_LEFT"?guard_angle_front:guard_angle)/2-1.0
+                :1
+                : (TYPE=="FRONT_RIGHT"?guard_angle_front:guard_angle)/2+1.0]){
         left(0.3)//Move together with beam
         align(TOP) zrot(a)up(prop_h) right(guard_beam_l + guard_beam_knee - guard_beam_t)
             cuboid([guard_beam_t, guard_beam_t/2, guard_beam_t]);
+    }
+    if (TYPE == "FRONT_LEFT" || TYPE == "FRONT_RIGHT") {
+        // Arc extension
+        inverse = (TYPE=="FRONT_LEFT"?1:-1);
+        zrot(-guard_angle_front/2*inverse) align(TOP, RIGHT)
+            left(-guard_beam_l+0.3)
+            up(prop_h)
+            fwd(extension_front/2*inverse)
+            cuboid([guard_beam_t, extension_front, guard_beam_t]);
     }
 }
 
