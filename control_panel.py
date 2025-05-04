@@ -14,8 +14,9 @@ import sys
 
 from auto_connect import auto_connect
 from blinory import Drone
+from prefixed import Float
 from threading import Thread
-from time import sleep
+from time import sleep, time
 from ui_colors import *
 from ui_elements import Button, Slider
 
@@ -28,6 +29,8 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
 KEYBOARD_PRESS_WEIGHT = 60
+
+PRINT_LOOPTIME = True  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
@@ -69,15 +72,20 @@ def set_stream_surface(frame):
     frame = pygame.transform.scale(frame, (500,282))
     stream_surface = frame
 
+counter = 0
 def process_stream():
     drone_stream = pylwdrone.LWDrone()
+    #TODO: heartbeat?
     #TODO: error catching for when drone was not on
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
     prev_correct_cmd = False    # True means that we have sent out a correction to the drone
+    global counter
+    counter += 1
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
+        start = time()
         framedatas=decoder.decode(bytes(_frame.frame_bytes))
         for framedata in framedatas:
             (frame, w, h, ls) = framedata
@@ -103,6 +111,8 @@ def process_stream():
                         print("Setting_throttle: ", suggested_correction[1])
                         drone.set_throttle(suggested_correction[1])
                         prev_correct_cmd = True
+        if PRINT_LOOPTIME:
+            print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
 
 # Initialize Pygame
