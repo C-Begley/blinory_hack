@@ -98,6 +98,14 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
                         text("REDWIRE SPACE", size=guard_beam_t*0.8);
 
                 }
+                // attachment to base
+                align(LEFT) right(guard_beam_t/1.5)
+                    back(guard_beam_t)
+                    wedge([guard_beam_t, guard_beam_t, guard_beam_t], orient=RIGHT);
+                align(LEFT) fwd(guard_beam_t*1.5)
+                    right(guard_beam_t/5)   //I don't know how this bottom one works...
+                    zrot(-90)
+                    wedge([guard_beam_t, guard_beam_t, guard_beam_t], orient=RIGHT);
             }
     }
     // longer guard beams
