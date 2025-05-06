@@ -51,6 +51,8 @@ foot_hole_d = 10;
 
 $align_msg=false;
 
+speed_up_render = 1;    // Set this  to a higher value (e.g. 5) to increase render speed during development
+
 diff()
 tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     tag("remove") position(LEFT) right(wall_t/2) cuboid([wall_t, leg_w, leg_h+2]);
@@ -71,13 +73,12 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     for(i = [(TYPE=="FRONT_LEFT"?0:-guard_angle/2)
             :guard_angle/(guard_beam_n-1)-0.01
             :(TYPE=="FRONT_RIGHT"?1:guard_angle/2)]){
-        echo(i);
         zrot(i) align(RIGHT, TOP)
             left(0.3)//Snug fit of cuboid to round surface of tube
             cuboid([guard_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
                 // Make tip of beam an angle.
                 //TODO: I'm not proud of this implementation. There has to be a better way.
-                n_seg = 40;
+                n_seg = 40 / speed_up_render;
                 align(RIGHT)
                 left(guard_beam_t)
                 for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
@@ -101,7 +102,7 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
                 cuboid([guard_long_beam_l-guard_beam_knee , guard_beam_t, guard_beam_t]){
                     // Make tip of beam an angle.
                     //TODO: I'm not proud of this implementation. There has to be a better way.
-                    n_seg = 40;
+                    n_seg = 40 / speed_up_render;
                     align(RIGHT)
                     left(guard_beam_t)
                     for(x = [0 : guard_beam_knee/n_seg : guard_beam_knee] )
@@ -119,7 +120,7 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
     }
     // Outer arc
     for(a = [-(TYPE=="FRONT_LEFT"?guard_angle_front:guard_angle)/2-1.0
-                :1
+                :1 * speed_up_render
                 : (TYPE=="FRONT_RIGHT"?guard_angle_front:guard_angle)/2+1.0]){
         left(0.3)//Move together with beam
         align(TOP) zrot(a)up(prop_h) right(guard_beam_l + guard_beam_knee - guard_beam_t)
