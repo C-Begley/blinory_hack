@@ -40,6 +40,8 @@ TYPE = "FRONT_RIGHT";
 /* TYPE = "BACK"; */
 guard_angle_front = 35;                     //Only for FRONT_ types
 guard_long_beam_l = guard_beam_l + 46.5;    //Only for FRONT_ types
+guard_beam_connector_orb_d = guard_beam_t*2;
+guard_beam_connector_orb_flatten = 1.5;
 extension_front = 110;                      //Only for FRONT_ types
 
 
@@ -85,6 +87,10 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
                 {
                     move([x,0,(x*x*x)/(guard_beam_knee*guard_beam_knee)]) cuboid([guard_beam_t, guard_beam_t, guard_beam_t]);
                 }
+                align(RIGHT)
+                    move([guard_beam_connector_orb_d/1, 0, guard_beam_knee + guard_beam_connector_orb_d/3])
+                    scale([1, guard_beam_connector_orb_flatten, 1])
+                    sphere(d=guard_beam_connector_orb_d);
                 if (enable_text){
                     tag("remove") color("red") position(TOP)
                     down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
