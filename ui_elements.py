@@ -104,4 +104,90 @@ class Slider:
         if self.action:
             self.action(self.value)
 
+class Ticker:
+    def __init__(self, x, y, min_val, max_val, initial_val, label_text="", step=1):
+        self.min_val = min_val
+        self.max_val = max_val
+        self.value = max(min(initial_val, max_val), min_val)
+        self.label_text = label_text
+        self.step = step
+
+        # Component dimensions
+        self.display_width = 60
+        self.display_height = 40
+        self.button_size = 20
+        self.label_padding = 10
+
+        # Font setup
+        self.font = pygame.font.SysFont('Arial', 24)
+
+        # Create label surface first to calculate positions
+        self.label_surface = self.font.render(self.label_text, True, (0, 0, 0))
+        self.label_rect = self.label_surface.get_rect(topleft=(x, y + self.display_height//4))
+
+        # Create component rectangles (adjusted for label)
+        self.display_rect = pygame.Rect(
+            x + self.label_rect.width + self.label_padding,
+            y,
+            self.display_width,
+            self.display_height
+        )
+        self.up_button_rect = pygame.Rect(
+            self.display_rect.right,
+            y,
+            self.button_size,
+            self.button_size
+        )
+        self.down_button_rect = pygame.Rect(
+            self.display_rect.right,
+            y + self.button_size,
+            self.button_size,
+            self.button_size
+        )
+
+        # Arrow polygon points
+        margin = 5
+        # Up arrow points (top, bottom-left, bottom-right)
+        self.up_arrow = [
+            (self.up_button_rect.centerx, self.up_button_rect.top + margin),
+            (self.up_button_rect.left + margin, self.up_button_rect.bottom - margin),
+            (self.up_button_rect.right - margin, self.up_button_rect.bottom - margin)
+        ]
+        # Down arrow points (bottom, top-left, top-right)
+        self.down_arrow = [
+            (self.down_button_rect.centerx, self.down_button_rect.bottom - margin),
+            (self.down_button_rect.left + margin, self.down_button_rect.top + margin),
+            (self.down_button_rect.right - margin, self.down_button_rect.top + margin)
+        ]
+
+    def draw(self, surface):
+        # Draw label
+        surface.blit(self.label_surface, self.label_rect)
+
+        # Draw display background and border
+        pygame.draw.rect(surface, (255, 255, 255), self.display_rect)  # White background
+        pygame.draw.rect(surface, (0, 0, 0), self.display_rect, 2)     # Black border
+
+        # Draw up button
+        pygame.draw.rect(surface, (200, 200, 200), self.up_button_rect)  # Gray background
+        pygame.draw.rect(surface, (0, 0, 0), self.up_button_rect, 2)    # Black border
+        pygame.draw.polygon(surface, (0, 0, 0), self.up_arrow)          # Black arrow
+
+        # Draw down button
+        pygame.draw.rect(surface, (200, 200, 200), self.down_button_rect)
+        pygame.draw.rect(surface, (0, 0, 0), self.down_button_rect, 2)
+        pygame.draw.polygon(surface, (0, 0, 0), self.down_arrow)
+
+        # Render and center text
+        text_surface = self.font.render(str(self.value), True, (0, 0, 0))
+        text_rect = text_surface.get_rect(center=self.display_rect.center)
+        surface.blit(text_surface, text_rect)
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = event.pos
+            if self.up_button_rect.collidepoint(mouse_pos):
+                self.value = min(self.value + self.step, self.max_val)
+            elif self.down_button_rect.collidepoint(mouse_pos):
+                self.value = max(self.value - self.step, self.min_val)
 
