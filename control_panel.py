@@ -12,6 +12,7 @@ import pygame
 import pylwdrone
 import sys
 
+from argparse import ArgumentParser
 from auto_connect import auto_connect
 from blinory import Drone
 from prefixed import Float
@@ -34,6 +35,13 @@ PRINT_LOOPTIME = True  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
+
+def parse_args():
+    parser = ArgumentParser(
+                    prog='Control panel',
+                    description='RDW Drone Challenge Control Panel')
+    parser.add_argument('--no_connect', action='store_true')
+    return parser.parse_args()
 
 def exit():
     global running
@@ -115,6 +123,8 @@ def process_stream():
             print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
 
+args = parse_args()
+
 # Initialize Pygame
 pygame.init()
 
@@ -122,9 +132,11 @@ pygame.init()
 running = True
 current_slider = None
 
-if auto_connect() < 0:  #TODO: maybe make this one configurable? On/Off?
-    print("Error connecting to drone. Was it on?")
-sleep(1)
+if not args.no_connect:
+    if auto_connect() < 0:  #TODO: maybe make this one configurable? On/Off?
+        print("Error connecting to drone. Was it on?")
+        exit(1)
+    sleep(1)
 
 stream_thread = Thread(target=process_stream, args=())
 stream_thread.start()
