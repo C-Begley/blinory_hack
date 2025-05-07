@@ -129,6 +129,11 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
                     {
                         move([x,0,(x*x*x)/(guard_beam_knee*guard_beam_knee)]) cuboid([guard_beam_t, guard_beam_t, guard_beam_t]);
                     }
+                    align(RIGHT)
+                        move([guard_beam_connector_orb_d*1.2, -inverse*guard_beam_connector_orb_d*0.3, guard_beam_knee + guard_beam_connector_orb_d/3])
+                    zrot(inverse*guard_angle_front)
+                    scale(guard_beam_connector_orb_flatten)
+                    sphere(d=guard_beam_connector_orb_d);
                     if (enable_text){
                         tag("remove") color("red") position(TOP)
                         down(textdepth-0.01) fwd((guard_beam_t*0.8)/2)
