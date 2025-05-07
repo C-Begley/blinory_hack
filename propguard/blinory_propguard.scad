@@ -22,6 +22,7 @@ $fn = 60;
 motor_d = 20;
 motor_h = 10;
 wall_t = 4;
+arm_wall_t = wall_t * 1.3;
 leg_h = 11;
 leg_w = 10.5;
 leg_l = 30;
@@ -51,13 +52,14 @@ enable_text = false;
 
 foot_hole_d = 10;
 
+
 $align_msg=false;
 
 speed_up_render = 1;    // Set this  to a higher value (e.g. 5) to increase render speed during development
 
 diff()
 tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
-    tag("remove") position(LEFT) right(wall_t/2) cuboid([wall_t, leg_w, leg_h+2]);
+    tag("remove") position(LEFT) right(wall_t/2) cuboid([wall_t, leg_w, leg_h+floor_t+2]);
     align(BOTTOM){
         zcyl(d=motor_d+wall_t, h=floor_t)
         // Hole in floor for drone feet
@@ -67,8 +69,8 @@ tube(id1=motor_d-sf, id2=motor_d, od=motor_d+wall_t, h=motor_h){
         }
     }
     align(LEFT){
-    right(wall_t/2) cuboid([leg_l+wall_t/2, leg_w+wall_t, leg_h]);
-    tag("remove") attach(CTR) right(wall_t/2) cuboid([leg_l+wall_t/2+1, leg_w, leg_h+1]);
+    down(floor_t/2) right(arm_wall_t/2) cuboid([leg_l+wall_t/2, leg_w+arm_wall_t, leg_h + floor_t/2]);
+    tag("remove") attach(CTR) right(wall_t/2) cuboid([leg_l+wall_t/2+1, leg_w, leg_h+floor_t+1.01]);
     }
 
     // guard beams
