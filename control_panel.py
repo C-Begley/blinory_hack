@@ -12,6 +12,9 @@ import pygame
 import pylwdrone
 import sys
 
+# Initialize Pygame here, because otherwise you can't use fonts in libs... (stupid design imho..)
+pygame.init()
+
 from argparse import ArgumentParser
 from auto_connect import auto_connect
 from blinory import Drone
@@ -19,7 +22,7 @@ from prefixed import Float
 from threading import Thread
 from time import sleep, time
 from ui_colors import *
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, Ticker
 
 #TODO: add one try-catch around entire program that will send an emergency stop before crashing?
 
@@ -71,6 +74,13 @@ sliders = [
            action=drone.set_roll),
 ]
 
+#TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
+tickers = {
+        "roll": Ticker(200, 100, -10, 10, 0, label_text="×Roll:"),
+        "pitch": Ticker(400, 100, -10, 10, 0, label_text="×Pitch:"),
+        "throttle": Ticker(600, 100, -10, 10, 0, label_text="×Throttle:")
+}
+
 def set_stream_surface(frame):
     global stream_surface
     frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR -> Convert back to RGB for Pygame
@@ -114,19 +124,18 @@ def process_stream():
                         drone.set_throttle(0)
                         prev_correct_cmd = False
                     else:
-                        print("Setting_roll: ", suggested_correction[0])
-                        drone.set_roll(suggested_correction[0])
-                        print("Setting_throttle: ", suggested_correction[1])
-                        drone.set_throttle(suggested_correction[1])
+                        print("Setting_roll: ",
+                              suggested_correction[0]*tickers['roll'].value)
+                        drone.set_roll(suggested_correction[0]*tickers['roll'].value)
+                        print("Setting_throttle: ",
+                              suggested_correction[1]*tickers['throttle'].value)
+                        drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
                         prev_correct_cmd = True
         if PRINT_LOOPTIME:
             print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
 
 args = parse_args()
-
-# Initialize Pygame
-pygame.init()
 
 # Main loop
 running = True
@@ -158,6 +167,11 @@ while running:
                 if btn.rect.collidepoint(event.pos):
                     print(f"Button pressed: {btn.text}")
                     btn.do_action()
+
+            for ticker in tickers.values():
+                ticker.handle_event(event)
+                #TODO: try to convert the other elements to also use this way of
+                #       event handling. It's much cleaner.
 
             # Check sliders
             for slider in sliders:
@@ -252,6 +266,9 @@ while running:
 
     for slider in sliders:
         slider.draw(screen)
+
+    for ticker in tickers.values():
+        ticker.draw(screen)
 
     if stream_surface:
         #TODO: I'd like these coords to be better defined. Maybe relative to the UI lements.
