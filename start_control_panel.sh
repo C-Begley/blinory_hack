@@ -7,4 +7,4 @@ if [ $? -eq 0 ]; then
 fi
 
 
-python -u control_panel.py $@ 2>&1 | grep -v "swscaler"
+env/bin/python -u control_panel.py $@ 2>&1 | grep -v "swscaler"
