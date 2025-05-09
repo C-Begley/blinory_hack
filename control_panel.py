@@ -76,9 +76,9 @@ sliders = [
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
-        "roll": Ticker(200, 100, -10, 10, 0, label_text="×Roll:"),
-        "pitch": Ticker(400, 100, -10, 10, 0, label_text="×Pitch:"),
-        "throttle": Ticker(600, 100, -10, 10, 0, label_text="×Throttle:")
+        "roll": Ticker(200, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
+        "pitch": Ticker(400, 100, -10, 10, 0, label_text="×Pitch:", step=0.1),
+        "throttle": Ticker(600, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1)
 }
 
 def set_stream_surface(frame):
@@ -133,10 +133,10 @@ def process_stream():
                           and suggested_correction[1]:
                             print("Setting_roll: ",
                                   suggested_correction[0]*tickers['roll'].value)
-                            drone.set_roll(suggested_correction[0]*tickers['roll'].value*0.3)
+                            drone.set_roll(suggested_correction[0]*tickers['roll'].value)
                             print("Setting_throttle: ",
                                   suggested_correction[1]*tickers['throttle'].value)
-                            drone.set_throttle(suggested_correction[1]*tickers['throttle'].value*0.3)
+                            drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
                             prev_correct_cmd = True
         if PRINT_LOOPTIME:
             print(f"Elapsed time for full run: {Float(time() - start):.2h}s")

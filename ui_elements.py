@@ -179,7 +179,7 @@ class Ticker:
         pygame.draw.polygon(surface, (0, 0, 0), self.down_arrow)
 
         # Render and center text
-        text_surface = self.font.render(str(self.value), True, (0, 0, 0))
+        text_surface = self.font.render(f"{self.value:.1f}", True, (0, 0, 0))
         text_rect = text_surface.get_rect(center=self.display_rect.center)
         surface.blit(text_surface, text_rect)
 
