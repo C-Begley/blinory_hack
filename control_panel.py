@@ -100,20 +100,24 @@ def process_stream():
     prev_correct_cmd = False    # True means that we have sent out a correction to the drone
     global counter
     counter += 1
+    cnt = 0
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
         start = time()
         framedatas=decoder.decode(bytes(_frame.frame_bytes))
+        cnt += 1
+        # Rough frame-rate reducer
+        if cnt != 3:
+            continue
+        else:
+            cnt = 0
         for framedata in framedatas:
             (frame, w, h, ls) = framedata
             if frame is not None:
                 frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
                 frame = frame.reshape((h, ls//3, 3))
                 frame = frame[:,:w,:]
-                # if frame is None:
-                #     print("No frame, skipping...")
-                #     continue
                 frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
                 frame, suggested_correction = hoop_detector.process_frame(frame)
                 set_stream_surface(frame)
