@@ -154,8 +154,8 @@ if not args.no_connect:
         exit(1)
     sleep(1)
 
-stream_thread = Thread(target=process_stream, args=())
-stream_thread.start()
+    stream_thread = Thread(target=process_stream, args=())
+    stream_thread.start()
 
 
 while running:
@@ -284,7 +284,8 @@ while running:
 
     pygame.display.flip()
 
-stream_thread.join()
+if not args.no_connect:
+    stream_thread.join()
 pygame.quit()
 sys.exit()
 
