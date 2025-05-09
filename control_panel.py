@@ -128,13 +128,16 @@ def process_stream():
                         drone.set_throttle(0)
                         prev_correct_cmd = False
                     else:
-                        print("Setting_roll: ",
-                              suggested_correction[0]*tickers['roll'].value)
-                        drone.set_roll(suggested_correction[0]*tickers['roll'].value)
-                        print("Setting_throttle: ",
-                              suggested_correction[1]*tickers['throttle'].value)
-                        drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
-                        prev_correct_cmd = True
+                        if suggested_correction \
+                          and suggested_correction[0] \
+                          and suggested_correction[1]:
+                            print("Setting_roll: ",
+                                  suggested_correction[0]*tickers['roll'].value)
+                            drone.set_roll(suggested_correction[0]*tickers['roll'].value*0.3)
+                            print("Setting_throttle: ",
+                                  suggested_correction[1]*tickers['throttle'].value)
+                            drone.set_throttle(suggested_correction[1]*tickers['throttle'].value*0.3)
+                            prev_correct_cmd = True
         if PRINT_LOOPTIME:
             print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
