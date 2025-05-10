@@ -66,18 +66,22 @@ def drone_emergency_stop():
     drone.emergency_stop()
 
 def drone_set_throttle(val):
+    val += ticker["cThrottle"].value
     drone.set_throttle(val)
     sliders[0].set_value(val)
 
 def drone_set_pitch(val):
+    val += ticker["cPitch"].value
     drone.set_pitch(val)
     sliders[1].set_value(val)
 
 def drone_set_roll(val):
+    val += ticker["cRoll"].value
     drone.set_roll(val)
     sliders[3].set_value(val)
 
 def drone_set_yaw(val):
+    val += ticker["cYaw"].value
     drone.set_yaw(val)
     sliders[2].set_value(val)
 
@@ -106,18 +110,29 @@ sliders = [
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
+        # Hoop fly aggressiveness
         "roll":         Ticker(220, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
         "throttle":     Ticker(420, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
         "pitch":        Ticker(220, 150, 0, 100, 10, label_text="vPitch:", step=0.1),
+        # Threshold before moving forward
         "fwdthresh":    Ticker(420, 150, 0, 50, 0, label_text="ΔThr", step=5),
+        # Correct camera movement when pitching forward
         "pitch_v_corr": Ticker(620, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
 
+        # Manual flying speeds
         "manual_roll_speed":        Ticker(50, 600, 20, 100, 50, label_text="MvRoll", step=10),
         "manual_pitch_speed":       Ticker(250, 600, 20, 100, 50, label_text="MvPitch", step=10),
         "manual_throttle_speed":    Ticker(450, 600, 20, 100, 50, label_text="MvThrottle", step=10),
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
+        # Smoothing factor for hoop flying corrections
         "smoothing":         Ticker(50, 650, 0, 1, 0.5, label_text="Smoothing", step=0.1),
+
+        # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
+        "cRoll":        Ticker(50, 700, -100, 100, 0, label_text="cRoll", step=5),
+        "cPitch":       Ticker(250, 700, -100, 100, 0, label_text="cPitch", step=5),
+        "cYaw":         Ticker(450, 700, -100, 100, 0, label_text="cYaw", step=5),
+        "cThrottle":    Ticker(650, 700, -100, 100, 0, label_text="cThrottle", step=5),
 }
 
 def set_stream_surface(frame):
