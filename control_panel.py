@@ -65,6 +65,22 @@ def drone_emergency_stop():
     hoop_flying_enabled = False
     drone.emergency_stop()
 
+def drone_set_throttle(val):
+    drone.set_throttle(val)
+    sliders[0].set_value(val)
+
+def drone_set_pitch(val):
+    drone.set_pitch(val)
+    sliders[1].set_value(val)
+
+def drone_set_roll(val):
+    drone.set_roll(val)
+    sliders[3].set_value(val)
+
+def drone_set_yaw(val):
+    drone.set_yaw(val)
+    sliders[2].set_value(val)
+
 drone = Drone()
 
 # Create UI elements
@@ -79,13 +95,13 @@ buttons = [
 sliders = [
     #TODO: It's still not entirely clear whether Throttle should be 0 - 100, or -125 - +125
     Slider(50, 200, 200, -100, 100, "Throttle", orientation='vertical',
-           init_centered=True, snap_back=True, action=drone.set_throttle),
+           init_centered=True, snap_back=True, action=drone_set_throttle),
     Slider(150, 200, 200, -100, 100, "Pitch", orientation='vertical', init_centered=True,
-           snap_back=True, action=drone.set_pitch),
+           snap_back=True, action=drone_set_pitch),
     Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True,
-           action=drone.set_yaw),
+           action=drone_set_yaw),
     Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True,
-           action=drone.set_roll),
+           action=drone_set_roll),
 ]
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
@@ -148,8 +164,8 @@ def hoop_flying():
         set_stream_surface(frame)
         if suggested_correction == None and prev_correct_cmd:
             print("all to 0: ")
-            drone.set_roll(0)
-            drone.set_throttle(0)
+            drone_set_roll(0)
+            drone_set_throttle(0)
             prev_correct_cmd = False
             csvwriter.writerow([time(),0,0,0,0])
         else:
@@ -173,10 +189,10 @@ def hoop_flying():
                 #TODO: show these on CP instead of printing
                 # print("Setting_roll: ",
                 #       avcor[0]*tickers['roll'].value)
-                drone.set_roll(avcor[0]*tickers['roll'].value)
+                drone_set_roll(avcor[0]*tickers['roll'].value)
                 # print("Setting_throttle: ",
                 #       avcor[1]*tickers['throttle'].value)
-                drone.set_throttle(avcor[1]*tickers['throttle'].value)
+                drone_set_throttle(avcor[1]*tickers['throttle'].value)
                 prev_correct_cmd = True
                 #Determine if we're confident enough to fly through
                 #TODO: I think ideally the threshold should be a function of the distance to the hoop.
@@ -190,13 +206,13 @@ def hoop_flying():
                 if avcor[0] < tickers["fwdthresh"].value \
                   and avcor[1] < tickers["fwdthresh"].value:
                     print("Okay, we're close enough... let's go forward!")
-                    drone.set_pitch(tickers["pitch"].value)
+                    drone_set_pitch(tickers["pitch"].value)
                     # Reduce correction on vertical axis due to camera going down
-                    drone.set_throttle(avcor[1]
+                    drone_set_throttle(avcor[1]
                                        * tickers["throttle"].value
                                        / (ticker["pitch_v_corr"]+1))
                 else:
-                    drone.set_pitch(0)
+                    drone_set_pitch(0)
 
 
 
@@ -301,29 +317,21 @@ while running:
                 case pygame.K_ESCAPE:
                     drone_emergency_stop()
                 case pygame.K_r:
-                    drone.set_throttle(tickers['manual_throttle_speed'].value)
-                    sliders[0].set_value(tickers['manual_throttle_speed'].value)
+                    drone_set_throttle(tickers['manual_throttle_speed'].value)
                 case pygame.K_f:
-                    drone.set_throttle(-tickers['manual_throttle_speed'].value)
-                    sliders[0].set_value(-tickers['manual_throttle_speed'].value)
+                    drone_set_throttle(-tickers['manual_throttle_speed'].value)
                 case pygame.K_a:
-                    drone.set_roll(-tickers['manual_roll_speed'].value)
-                    sliders[3].set_value(-tickers['manual_roll_speed'].value)
+                    drone_set_roll(-tickers['manual_roll_speed'].value)
                 case pygame.K_d:
-                    drone.set_roll(tickers['manual_roll_speed'].value)
-                    sliders[3].set_value(tickers['manual_roll_speed'].value)
+                    drone_set_roll(tickers['manual_roll_speed'].value)
                 case pygame.K_w:
-                    drone.set_pitch(tickers['manual_pitch_speed'].value)
-                    sliders[1].set_value(tickers['manual_pitch_speed'].value)
+                    drone_set_pitch(tickers['manual_pitch_speed'].value)
                 case pygame.K_s:
-                    drone.set_pitch(-tickers['manual_pitch_speed'].value)
-                    sliders[1].set_value(-tickers['manual_pitch_speed'].value)
+                    drone_set_pitch(-tickers['manual_pitch_speed'].value)
                 case pygame.K_q:
-                    drone.set_yaw(-tickers['manual_yaw_speed'].value)
-                    sliders[2].set_value(-tickers['manual_yaw_speed'].value)
+                    drone_set_yaw(-tickers['manual_yaw_speed'].value)
                 case pygame.K_e:
-                    drone.set_yaw(tickers['manual_yaw_speed'].value)
-                    sliders[2].set_value(tickers['manual_yaw_speed'].value)
+                    drone_set_yaw(tickers['manual_yaw_speed'].value)
                 case pygame.K_RETURN:
                     drone.lift_off()
                 case pygame.K_BACKSPACE:
@@ -335,29 +343,21 @@ while running:
         elif event.type == pygame.KEYUP:
             match event.key:
                 case pygame.K_r:
-                    drone.set_throttle(0)
-                    sliders[0].set_value(0)
+                    drone_set_throttle(0)
                 case pygame.K_f:
-                    drone.set_throttle(0)
-                    sliders[0].set_value(0)
+                    drone_set_throttle(0)
                 case pygame.K_a:
-                    drone.set_roll(0)
-                    sliders[3].set_value(0)
+                    drone_set_roll(0)
                 case pygame.K_d:
-                    drone.set_roll(0)
-                    sliders[3].set_value(0)
+                    drone_set_roll(0)
                 case pygame.K_w:
-                    drone.set_pitch(0)
-                    sliders[1].set_value(0)
+                    drone_set_pitch(0)
                 case pygame.K_s:
-                    drone.set_pitch(0)
-                    sliders[1].set_value(0)
+                    drone_set_pitch(0)
                 case pygame.K_q:
-                    drone.set_yaw(0)
-                    sliders[2].set_value(0)
+                    drone_set_yaw(0)
                 case pygame.K_e:
-                    drone.set_yaw(0)
-                    sliders[2].set_value(0)
+                    drone_set_yaw(0)
 
     # Draw UI elements
     for btn in buttons:
