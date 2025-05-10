@@ -144,7 +144,7 @@ def hoop_flying():
             drone.set_roll(0)
             drone.set_throttle(0)
             prev_correct_cmd = False
-            csvwriter.writerow([0,0,0,0])
+            csvwriter.writerow([time(),0,0,0,0])
         else:
             if suggested_correction \
               and suggested_correction[0] \
@@ -161,10 +161,12 @@ def hoop_flying():
                 #Determine if we're confident enough to fly through
                 #TODO: I think ideally the threshold should be a function of the distance to the hoop.
                 #NOTE: This doesn't take into account the corrections for pitch. That's okay for now.
-                csvwriter.writerow([suggested_correction[0],
+                csvwriter.writerow([time(),
+                                    suggested_correction[0],
                                     suggested_correction[1],
                                     avcor[0],
-                                    avcor[1]])
+                                    avcor[1],
+                                    tickers['smoothing']])
                 if avcor[0] < tickers["fwdthresh"].value \
                   and avcor[1] < tickers["fwdthresh"].value:
                     print("Okay, we're close enough... let's go forward!")
