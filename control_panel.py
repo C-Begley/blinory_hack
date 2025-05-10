@@ -83,10 +83,10 @@ sliders = [
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
-        "roll": Ticker(200, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
-        "throttle": Ticker(400, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
-        "pitch": Ticker(600, 100, -10, 10, 0, label_text="×Pitch:", step=0.1),
-        "thresh": Ticker(800, 100, 0, 50, 0, label_text="ΔThr", step=5),
+        "roll":         Ticker(200, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
+        "throttle":     Ticker(400, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
+        "pitch":        Ticker(600, 100, 0, 100, 10, label_text="vPitch:", step=0.1),
+        "fwdthresh":    Ticker(800, 100, 0, 50, 0, label_text="ΔThr", step=5),
 }
 
 def set_stream_surface(frame):
@@ -131,12 +131,25 @@ def hoop_flying():
                 #       suggested_correction[1]*tickers['throttle'].value)
                 drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
                 prev_correct_cmd = True
+                #Determine if we're confident enough to fly through
+                #TODO: I think ideally the threshold should be a function of the distance to the hoop.
+                if suggested_correction[0] < tickers["fwdthresh"].value \
+                  and suggested_correction[1] < tickers["fwdthresh"].value:
+                    print("Okay, we're close enough... let's go forward!")
+                    drone.set_pitch(tickers["pitch"].value)
+                else:
+                    drone.set_pitch(0)
+
+
 
 
 def process_stream():
     drone_stream = pylwdrone.LWDrone()
     #TODO: heartbeat?
     #TODO: error catching for when drone was not on
+    #TODO: sometimes it fails to get the video stream the first time.
+    #       Maybe we should add some retry mechanism here for that?
+    #       Or maybe a simple sleep of a second or two will do?
     global last_frame
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
