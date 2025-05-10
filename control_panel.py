@@ -117,9 +117,9 @@ def smoothen_correction(avcor, sugcor, alpha=0.1):
     assert 0 < alpha < 1
     if alpha == 1:
         alpha = alpha*0.95  #Otherwise there's no actual data used at all...
-    avcor[0] = alpha * avcor[0] + (1 - alpha) * sugcor[0]
-    avcor[1] = alpha * avcor[1] + (1 - alpha) * sugcor[1]
-    return avcor
+    avcor0 = alpha * avcor[0] + (1 - alpha) * sugcor[0]
+    avcor1 = alpha * avcor[1] + (1 - alpha) * sugcor[1]
+    return (avcor0, avcor1)
 
 def hoop_flying():
     # global last_frame
@@ -149,7 +149,7 @@ def hoop_flying():
             if suggested_correction \
               and suggested_correction[0] \
               and suggested_correction[1]:
-                avcor = smoothen(avcor, suggested_correction, tickers['smoothing'].value)
+                avcor = smoothen_correction(avcor, suggested_correction, tickers['smoothing'].value)
                 #TODO: show these on CP instead of printing
                 # print("Setting_roll: ",
                 #       avcor[0]*tickers['roll'].value)
