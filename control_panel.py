@@ -58,13 +58,21 @@ def exit():
     drone.deactivate()
     running = False
 
+def drone_land():
+    hoop_flying_enabled = False
+    drone.land()
+
+def drone_emergency_stop():
+    hoop_flying_enabled = False
+    drone.emergency_stop()
+
 drone = Drone()
 
 # Create UI elements
 buttons = [
     Button(50, 50, 120, 40, "Lift Off", GREEN, action=drone.lift_off),
-    Button(200, 50, 120, 40, "Land", RED, action=drone.land),
-    Button(350, 50, 200, 40, "Emergency Stop", RED, action=drone.emergency_stop),
+    Button(200, 50, 120, 40, "Land", RED, action=drone_land),
+    Button(350, 50, 200, 40, "Emergency Stop", RED, action=drone_emergency_stop),
     Button(600, 50, 120, 40, "Exit", BLUE, action=exit),
     Button(50, 100, 120, 40, "Activate", GREEN, action=drone.activate),
 ]
@@ -239,9 +247,9 @@ while running:
         elif event.type == pygame.KEYDOWN:
             match event.key:
                 case pygame.K_SPACE:
-                    drone.emergency_stop()
+                    drone_emergency_stop()
                 case pygame.K_ESCAPE:
-                    drone.emergency_stop()
+                    drone_emergency_stop()
                 case pygame.K_r:
                     drone.set_throttle(KEYBOARD_PRESS_WEIGHT)
                     sliders[0].set_value(KEYBOARD_PRESS_WEIGHT)
@@ -269,7 +277,7 @@ while running:
                 case pygame.K_RETURN:
                     drone.lift_off()
                 case pygame.K_BACKSPACE:
-                    drone.land()
+                    drone_land()
                 case pygame.K_h:
                     hoop_flying_enabled = not hoop_flying_enabled
                     print("Hoop flying: ", hoop_flying_enabled)
