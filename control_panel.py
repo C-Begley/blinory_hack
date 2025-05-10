@@ -113,12 +113,19 @@ def set_stream_surface(frame):
     frame = pygame.transform.scale(frame, (700,394))
     stream_surface = frame
 
-def smoothen_correction(avcor, sugcor, alpha=0.1):
+# alpha: smoothing strength. Range: 0-1
+# theta: dynamic adjustment of alpha. Used when the prediction is uncertain.
+#        Range: 0-1: 1 = take fully into consideration, 0 = ignore this value
+def smoothen_correction(avcor, sugcor, alpha=0.1, theta=1):
     assert 0 < alpha < 1
     if alpha == 1:
         alpha = alpha*0.95  #Otherwise there's no actual data used at all...
+
+    alpha = alpha*theta
+
     avcor0 = alpha * avcor[0] + (1 - alpha) * sugcor[0]
     avcor1 = alpha * avcor[1] + (1 - alpha) * sugcor[1]
+
     return (avcor0, avcor1)
 
 def hoop_flying():
@@ -137,7 +144,7 @@ def hoop_flying():
         if frame is None:
             sleep(0.5)
             continue
-        frame, suggested_correction = hoop_detector.process_frame(frame)
+        frame, suggested_correction, certainty = hoop_detector.process_frame(frame)
         set_stream_surface(frame)
         if suggested_correction == None and prev_correct_cmd:
             print("all to 0: ")
@@ -149,7 +156,20 @@ def hoop_flying():
             if suggested_correction \
               and suggested_correction[0] \
               and suggested_correction[1]:
-                avcor = smoothen_correction(avcor, suggested_correction, tickers['smoothing'].value)
+                match(certainty):
+                    case hoop_detector.PredictionCertainty.CERTAIN:
+                        theta = 1
+                    case hoop_detector.PredictionCertainty.RELIABLE:
+                        theta = 0.75
+                    case hoop_detector.PredictionCertainty.RELIABLE:
+                        theta = 0.5
+                    case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
+                        theta = 0.3
+                    case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
+                        theta = 0.1
+                avcor = smoothen_correction(avcor,
+                                            suggested_correction,
+                                            tickers['smoothing'].value, theta=theta)
                 #TODO: show these on CP instead of printing
                 # print("Setting_roll: ",
                 #       avcor[0]*tickers['roll'].value)
