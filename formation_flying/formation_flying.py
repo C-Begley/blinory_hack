@@ -32,7 +32,7 @@ def update_value(val, tol):
         return 0
 
 class formation_flyer():
-    def __init__(self, display_frame=False): 
+    def __init__(self, frame_width = 1024, frame_height = 1024, display_frame=True, draw_marker=True): 
         self.x_tol = 10
         self.y_tol = 10
         self.roll_tol = 10
@@ -45,7 +45,12 @@ class formation_flyer():
         self.yaw_cor = 0
         self.pitch_cor = 0
 
+        self.correction = False
+
+        self.set_dimensions(frame_width, frame_height)
+
         self.display_frame = display_frame
+        self.draw_marker = draw_marker
 
         # Load the camera parameters from the saved file
         with np.load(c.calibration_data) as X:
@@ -56,6 +61,11 @@ class formation_flyer():
         parameters = cv2.aruco.DetectorParameters()
         self.detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
 
+    def set_dimensions(self, frame_width, frame_height):
+        self.frame_height = frame_height
+        self.frame_width = frame_width
+        self.centre_x = frame_width/2
+        self.centre_y = frame_height/2
 
     def get_centre(self, corners):
         x_sum = corners[0][0][0][0]+ corners[0][0][1][0]+ corners[0][0][2][0]+ corners[0][0][3][0]
@@ -89,12 +99,10 @@ class formation_flyer():
             else:
                 self.get_centre(corners)
                 self.get_angles(frame, corners, ids)
-                if(self.display_frame):
+                if(self.draw_marker):
                     cv2.aruco.drawDetectedMarkers(frame, corners, ids)
 
-    def process_frame(self):
-        #Capture frame
-        ret, frame = self.vid.read()    
+    def process_frame(self, frame):   
         
         #Convert to grey to make detection easier
         grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -112,20 +120,22 @@ class formation_flyer():
         if(self.display_frame):
             cv2.imshow('frame',frame)
 
-        print("Move x: {:2f}, y: {:2f}, roll : {:2f}, pitch: {:2f}, yaw: {:2f}".format(
-            self.x_cor, self.y_cor, self.roll_cor, self.pitch_cor, self.yaw_cor), 
-            end = '\r')      
+        if(1):
+            print("Move x: {:2f}, y: {:2f}, roll : {:2f}, pitch: {:2f}, yaw: {:2f}".format(
+                self.x_cor, self.y_cor, self.roll_cor, self.pitch_cor, self.yaw_cor))
+
+        self.correction = (self.x_cor != 0) or (self.y_cor != 0) or (self.yaw_cor !=0)
 
     def run_webcam(self, vid):
 
         self.vid = vid
         frame_width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.centre_x = frame_width/2
-        self.centre_y = frame_height/2
+        self.set_dimensions(frame_width, frame_height)
 
         while(True):
-            self.process_frame()
+            ret, frame = self.vid.read() 
+            self.process_frame(frame)
             # If "q" is pressed on the keyboard, 
             # exit this loop
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -138,7 +148,7 @@ class formation_flyer():
 def main():
     vid=cv2.VideoCapture(0)
     drone = Drone()
-    flyer = formation_flyer(True)
+    flyer = formation_flyer()
     flyer.run_webcam(vid)
 
 if __name__ == '__main__':

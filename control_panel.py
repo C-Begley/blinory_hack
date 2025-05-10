@@ -11,6 +11,9 @@ import numpy as np
 import pygame
 import pylwdrone
 import sys
+import sys
+sys.path.append("formation_flying")
+import formation_flying as flyer
 
 # Initialize Pygame here, because otherwise you can't use fonts in libs... (stupid design imho..)
 pygame.init()
@@ -38,7 +41,7 @@ PRINT_LOOPTIME = True  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
-
+aruco_flying_enabled = False
 def parse_args():
     parser = ArgumentParser(
                     prog='Control panel',
@@ -101,6 +104,7 @@ def process_stream():
     global counter
     counter += 1
     cnt = 0
+    aruco = flyer.formation_flyer(1152, 2048, False)
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
@@ -118,26 +122,35 @@ def process_stream():
                 frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
                 frame = frame.reshape((h, ls//3, 3))
                 frame = frame[:,:w,:]
-                frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
-                frame, suggested_correction = hoop_detector.process_frame(frame)
-                set_stream_surface(frame)
                 if hoop_flying_enabled:
-                    if suggested_correction == None and prev_correct_cmd:
-                        print("all to 0: ")
-                        drone.set_roll(0)
-                        drone.set_throttle(0)
-                        prev_correct_cmd = False
-                    else:
-                        if suggested_correction \
-                          and suggested_correction[0] \
-                          and suggested_correction[1]:
-                            print("Setting_roll: ",
-                                  suggested_correction[0]*tickers['roll'].value)
-                            drone.set_roll(suggested_correction[0]*tickers['roll'].value*0.3)
-                            print("Setting_throttle: ",
-                                  suggested_correction[1]*tickers['throttle'].value)
-                            drone.set_throttle(suggested_correction[1]*tickers['throttle'].value*0.3)
-                            prev_correct_cmd = True
+                    frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
+                    frame, suggested_correction = hoop_detector.process_frame(frame)
+                elif aruco_flying_enabled:
+                        aruco.process_frame(frame)
+                        if(aruco.correction):
+                            suggested_correction = (
+                                100*(aruco.x_cor/aruco.centre_x),
+                                100*(aruco.y_cor/aruco.centre_y))
+                        else:
+                            suggested_correction = None
+                if suggested_correction == None and prev_correct_cmd:
+                    print("all to 0: ")
+                    drone.set_roll(0)
+                    drone.set_throttle(0)
+                    prev_correct_cmd = False
+                else:
+                    if suggested_correction \
+                    and suggested_correction[0] \
+                    and suggested_correction[1]:
+                        print("Setting_roll: ",
+                                suggested_correction[0]*tickers['roll'].value)
+                        drone.set_roll(suggested_correction[0]*tickers['roll'].value*0.3)
+                        print("Setting_throttle: ",
+                                suggested_correction[1]*tickers['throttle'].value)
+                        drone.set_throttle(suggested_correction[1]*tickers['throttle'].value*0.3)
+                        prev_correct_cmd = True
+
+                set_stream_surface(frame)
         if PRINT_LOOPTIME:
             print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
@@ -240,6 +253,8 @@ while running:
                     hoop_flying_enabled = not hoop_flying_enabled
                     print("Hoop flying: ", hoop_flying_enabled)
                     #TODO: shop with indicator on UI? Color changing button?
+                case pygame.K_c:
+                    aruco_flying_enabled = not aruco_flying_enabled
         elif event.type == pygame.KEYUP:
             match event.key:
                 case pygame.K_r:
