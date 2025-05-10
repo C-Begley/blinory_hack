@@ -13,6 +13,9 @@ import pygame
 import pylwdrone
 import sys
 
+sys.sys.path.append("led_drawning")
+import pattern_to_draw as led
+
 # Initialize Pygame here, because otherwise you can't use fonts in libs... (stupid design imho..)
 pygame.init()
 
@@ -40,6 +43,7 @@ PRINT_LOOPTIME = False  #Can be used to measure the time one full iteration take
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
+draw_thread = None
 
 # We will store the frame globally to share it between threads
 last_frame = None
@@ -396,6 +400,13 @@ def process_events():
                     case pygame.K_e:
                         drone_set_yaw(0)
         clock.tick(60)
+def draw_thread_start():
+    global draw_thread
+    if(draw_thread != None and draw_thread.is_alive()):
+        print("Thread already running")
+    else:
+        draw_thread = Thread(target=led.draw_from_thread, args=[drone])
+        draw_thread.start()
 
 args = parse_args()
 
