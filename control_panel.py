@@ -35,8 +35,6 @@ WINDOW_HEIGHT = 800
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
-KEYBOARD_PRESS_WEIGHT = 60
-
 PRINT_LOOPTIME = False  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
@@ -101,6 +99,8 @@ tickers = {
         "manual_pitch_speed":       Ticker(250, 600, 20, 100, 50, label_text="MvPitch", step=10),
         "manual_throttle_speed":    Ticker(450, 600, 20, 100, 50, label_text="MvThrottle", step=10),
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
+
+        "smoothing":         Ticker(50, 650, 0, 1, 0.5, label_text="Smoothing", step=0.1),
 }
 
 def set_stream_surface(frame):
@@ -112,10 +112,19 @@ def set_stream_surface(frame):
     frame = pygame.transform.scale(frame, (700,394))
     stream_surface = frame
 
+def smoothen_correction(avcor, sugcor, alpha=0.1):
+    assert 0 < alpha < 1
+    if alpha == 1:
+        alpha = alpha*0.95  #Otherwise there's no actual data used at all...
+    avcor[0] = alpha * avcor[0] + (1 - alpha) * sugcor[0]
+    avcor[1] = alpha * avcor[1] + (1 - alpha) * sugcor[1]
+    return avcor
+
 def hoop_flying():
     # global last_frame
     global last_frame_lock
     prev_correct_cmd = False    # True means that we have sent out a correction to the drone
+    avcor = (0,0)   #Moving average for corrections
     while running:
         if not hoop_flying_enabled:
             sleep(0.2)
@@ -126,7 +135,6 @@ def hoop_flying():
             sleep(0.5)
             continue
         frame, suggested_correction = hoop_detector.process_frame(frame)
-        print(suggested_correction)
         set_stream_surface(frame)
         if suggested_correction == None and prev_correct_cmd:
             print("all to 0: ")
@@ -137,22 +145,23 @@ def hoop_flying():
             if suggested_correction \
               and suggested_correction[0] \
               and suggested_correction[1]:
+                avcor = smoothen(avcor, suggested_correction, tickers['smoothing'].value)
                 #TODO: show these on CP instead of printing
                 # print("Setting_roll: ",
-                #       suggested_correction[0]*tickers['roll'].value)
-                drone.set_roll(suggested_correction[0]*tickers['roll'].value)
+                #       avcor[0]*tickers['roll'].value)
+                drone.set_roll(avcor[0]*tickers['roll'].value)
                 # print("Setting_throttle: ",
-                #       suggested_correction[1]*tickers['throttle'].value)
-                drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
+                #       avcor[1]*tickers['throttle'].value)
+                drone.set_throttle(avcor[1]*tickers['throttle'].value)
                 prev_correct_cmd = True
                 #Determine if we're confident enough to fly through
                 #TODO: I think ideally the threshold should be a function of the distance to the hoop.
-                if suggested_correction[0] < tickers["fwdthresh"].value \
-                  and suggested_correction[1] < tickers["fwdthresh"].value:
+                if avcor[0] < tickers["fwdthresh"].value \
+                  and avcor[1] < tickers["fwdthresh"].value:
                     print("Okay, we're close enough... let's go forward!")
                     drone.set_pitch(tickers["pitch"].value)
                     # Reduce correction on vertical axis due to camera going down
-                    drone.set_throttle(suggested_correction[1]
+                    drone.set_throttle(avcor[1]
                                        * tickers["throttle"].value
                                        / (ticker["pitch_v_corr"]+1))
                 else:
