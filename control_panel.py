@@ -91,10 +91,11 @@ sliders = [
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
-        "roll":         Ticker(200, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
-        "throttle":     Ticker(400, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
-        "pitch":        Ticker(600, 100, 0, 100, 10, label_text="vPitch:", step=0.1),
-        "fwdthresh":    Ticker(800, 100, 0, 50, 0, label_text="ΔThr", step=5),
+        "roll":         Ticker(220, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
+        "throttle":     Ticker(420, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
+        "pitch":        Ticker(220, 150, 0, 100, 10, label_text="vPitch:", step=0.1),
+        "fwdthresh":    Ticker(420, 150, 0, 50, 0, label_text="ΔThr", step=5),
+        "pitch_v_corr": Ticker(620, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
 }
 
 def set_stream_surface(frame):
@@ -145,6 +146,10 @@ def hoop_flying():
                   and suggested_correction[1] < tickers["fwdthresh"].value:
                     print("Okay, we're close enough... let's go forward!")
                     drone.set_pitch(tickers["pitch"].value)
+                    # Reduce correction on vertical axis due to camera going down
+                    drone.set_throttle(suggested_correction[1]
+                                       * tickers["throttle"].value
+                                       / (ticker["pitch_v_corr"]+1))
                 else:
                     drone.set_pitch(0)
 
