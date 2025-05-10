@@ -96,6 +96,11 @@ tickers = {
         "pitch":        Ticker(220, 150, 0, 100, 10, label_text="vPitch:", step=0.1),
         "fwdthresh":    Ticker(420, 150, 0, 50, 0, label_text="ΔThr", step=5),
         "pitch_v_corr": Ticker(620, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
+
+        "manual_roll_speed":        Ticker(50, 600, 20, 100, 50, label_text="MvRoll", step=10),
+        "manual_pitch_speed":       Ticker(250, 600, 20, 100, 50, label_text="MvPitch", step=10),
+        "manual_throttle_speed":    Ticker(450, 600, 20, 100, 50, label_text="MvThrottle", step=10),
+        "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 }
 
 def set_stream_surface(frame):
@@ -256,29 +261,29 @@ while running:
                 case pygame.K_ESCAPE:
                     drone_emergency_stop()
                 case pygame.K_r:
-                    drone.set_throttle(KEYBOARD_PRESS_WEIGHT)
-                    sliders[0].set_value(KEYBOARD_PRESS_WEIGHT)
+                    drone.set_throttle(tickers['manual_throttle_speed'].value)
+                    sliders[0].set_value(tickers['manual_throttle_speed'].value)
                 case pygame.K_f:
-                    drone.set_throttle(-KEYBOARD_PRESS_WEIGHT)
-                    sliders[0].set_value(-KEYBOARD_PRESS_WEIGHT)
+                    drone.set_throttle(-tickers['manual_throttle_speed'].value)
+                    sliders[0].set_value(-tickers['manual_throttle_speed'].value)
                 case pygame.K_a:
-                    drone.set_roll(-KEYBOARD_PRESS_WEIGHT)
-                    sliders[3].set_value(-KEYBOARD_PRESS_WEIGHT)
+                    drone.set_roll(-tickers['manual_roll_speed'].value)
+                    sliders[3].set_value(-tickers['manual_roll_speed'].value)
                 case pygame.K_d:
-                    drone.set_roll(KEYBOARD_PRESS_WEIGHT)
-                    sliders[3].set_value(KEYBOARD_PRESS_WEIGHT)
+                    drone.set_roll(tickers['manual_roll_speed'].value)
+                    sliders[3].set_value(tickers['manual_roll_speed'].value)
                 case pygame.K_w:
-                    drone.set_pitch(KEYBOARD_PRESS_WEIGHT)
-                    sliders[1].set_value(KEYBOARD_PRESS_WEIGHT)
+                    drone.set_pitch(tickers['manual_pitch_speed'].value)
+                    sliders[1].set_value(tickers['manual_pitch_speed'].value)
                 case pygame.K_s:
-                    drone.set_pitch(-KEYBOARD_PRESS_WEIGHT)
-                    sliders[1].set_value(-KEYBOARD_PRESS_WEIGHT)
+                    drone.set_pitch(-tickers['manual_pitch_speed'].value)
+                    sliders[1].set_value(-tickers['manual_pitch_speed'].value)
                 case pygame.K_q:
-                    drone.set_yaw(-KEYBOARD_PRESS_WEIGHT)
-                    sliders[2].set_value(-KEYBOARD_PRESS_WEIGHT)
+                    drone.set_yaw(-tickers['manual_yaw_speed'].value)
+                    sliders[2].set_value(-tickers['manual_yaw_speed'].value)
                 case pygame.K_e:
-                    drone.set_yaw(KEYBOARD_PRESS_WEIGHT)
-                    sliders[2].set_value(KEYBOARD_PRESS_WEIGHT)
+                    drone.set_yaw(tickers['manual_yaw_speed'].value)
+                    sliders[2].set_value(tickers['manual_yaw_speed'].value)
                 case pygame.K_RETURN:
                     drone.lift_off()
                 case pygame.K_BACKSPACE:
