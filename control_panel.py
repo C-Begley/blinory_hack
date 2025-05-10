@@ -30,14 +30,14 @@ from ui_elements import Button, Slider, Ticker
 #       algorithm
 
 # Set up the window
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 1000
+WINDOW_HEIGHT = 800
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
 KEYBOARD_PRESS_WEIGHT = 60
 
-PRINT_LOOPTIME = True  #Can be used to measure the time one full iteration takes
+PRINT_LOOPTIME = False  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
@@ -84,8 +84,9 @@ sliders = [
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         "roll": Ticker(200, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
-        "pitch": Ticker(400, 100, -10, 10, 0, label_text="×Pitch:", step=0.1),
-        "throttle": Ticker(600, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1)
+        "throttle": Ticker(400, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
+        "pitch": Ticker(600, 100, -10, 10, 0, label_text="×Pitch:", step=0.1),
+        "thresh": Ticker(800, 100, 0, 50, 0, label_text="ΔThr", step=5),
 }
 
 def set_stream_surface(frame):
@@ -94,13 +95,14 @@ def set_stream_surface(frame):
     frame = np.rot90(frame) #Why is this suddenly necessary? Wasn't needed before?
     frame = pygame.surfarray.make_surface(frame)
     #NOTE: stream aspect ratio = 1.7777
-    frame = pygame.transform.scale(frame, (500,282))
+    frame = pygame.transform.scale(frame, (700,394))
     stream_surface = frame
 
 def hoop_flying():
     # global last_frame
     global last_frame_lock
-    while True:
+    prev_correct_cmd = False    # True means that we have sent out a correction to the drone
+    while running:
         if not hoop_flying_enabled:
             sleep(0.2)
             continue
@@ -110,24 +112,25 @@ def hoop_flying():
             sleep(0.5)
             continue
         frame, suggested_correction = hoop_detector.process_frame(frame)
+        print(suggested_correction)
         set_stream_surface(frame)
-        if hoop_flying_enabled:
-            if suggested_correction == None and prev_correct_cmd:
-                print("all to 0: ")
-                drone.set_roll(0)
-                drone.set_throttle(0)
-                prev_correct_cmd = False
-            else:
-                if suggested_correction \
-                  and suggested_correction[0] \
-                  and suggested_correction[1]:
-                    print("Setting_roll: ",
-                          suggested_correction[0]*tickers['roll'].value)
-                    drone.set_roll(suggested_correction[0]*tickers['roll'].value)
-                    print("Setting_throttle: ",
-                          suggested_correction[1]*tickers['throttle'].value)
-                    drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
-                    prev_correct_cmd = True
+        if suggested_correction == None and prev_correct_cmd:
+            print("all to 0: ")
+            drone.set_roll(0)
+            drone.set_throttle(0)
+            prev_correct_cmd = False
+        else:
+            if suggested_correction \
+              and suggested_correction[0] \
+              and suggested_correction[1]:
+                #TODO: show these on CP instead of printing
+                # print("Setting_roll: ",
+                #       suggested_correction[0]*tickers['roll'].value)
+                drone.set_roll(suggested_correction[0]*tickers['roll'].value)
+                # print("Setting_throttle: ",
+                #       suggested_correction[1]*tickers['throttle'].value)
+                drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
+                prev_correct_cmd = True
 
 
 def process_stream():
@@ -137,7 +140,6 @@ def process_stream():
     global last_frame
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
-    prev_correct_cmd = False    # True means that we have sent out a correction to the drone
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
@@ -299,12 +301,13 @@ while running:
     if stream_surface:
         #TODO: I'd like these coords to be better defined. Maybe relative to the UI lements.
         #       On top of that: I'd also like to have the stream in its own UI-element class.
-        screen.blit(stream_surface, (275, 150))
+        screen.blit(stream_surface, (275, 200))
 
     pygame.display.flip()
 
 if not args.no_connect:
     stream_thread.join()
+    hoop_fly_thread.join()
 pygame.quit()
 sys.exit()
 
