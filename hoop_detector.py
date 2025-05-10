@@ -382,7 +382,7 @@ def process_frame(frame):
     else:
         suggested_correction = None
 
-    return output_contours, suggested_correction
+    return output_contours, suggested_correction, certainty
 
 # TODO: I'm not a big fan of this. Need a more reliable way of doing things.
 def set_frame_dimensions(shape):
