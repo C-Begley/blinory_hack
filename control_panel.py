@@ -19,12 +19,15 @@ from argparse import ArgumentParser
 from auto_connect import auto_connect
 from blinory import Drone
 from prefixed import Float
-from threading import Thread
+from threading import Thread, Lock
 from time import sleep, time
 from ui_colors import *
 from ui_elements import Button, Slider, Ticker
 
 #TODO: add one try-catch around entire program that will send an emergency stop before crashing?
+#TODO: Ideally we also do a continuous ping to check if the drone is still connected. Because
+#       right not it can happen that we don't get a video feed anymore, but still keep running the
+#       algorithm
 
 # Set up the window
 WINDOW_WIDTH = 800
@@ -38,6 +41,10 @@ PRINT_LOOPTIME = True  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
+
+# We will store the frame globally to share it between threads
+last_frame = None
+last_frame_lock = Lock()
 
 def parse_args():
     parser = ArgumentParser(
@@ -90,28 +97,52 @@ def set_stream_surface(frame):
     frame = pygame.transform.scale(frame, (500,282))
     stream_surface = frame
 
-counter = 0
+def hoop_flying():
+    # global last_frame
+    global last_frame_lock
+    while True:
+        if not hoop_flying_enabled:
+            sleep(0.2)
+            continue
+        with last_frame_lock:
+            frame = last_frame
+        if frame is None:
+            sleep(0.5)
+            continue
+        frame, suggested_correction = hoop_detector.process_frame(frame)
+        set_stream_surface(frame)
+        if hoop_flying_enabled:
+            if suggested_correction == None and prev_correct_cmd:
+                print("all to 0: ")
+                drone.set_roll(0)
+                drone.set_throttle(0)
+                prev_correct_cmd = False
+            else:
+                if suggested_correction \
+                  and suggested_correction[0] \
+                  and suggested_correction[1]:
+                    print("Setting_roll: ",
+                          suggested_correction[0]*tickers['roll'].value)
+                    drone.set_roll(suggested_correction[0]*tickers['roll'].value)
+                    print("Setting_throttle: ",
+                          suggested_correction[1]*tickers['throttle'].value)
+                    drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
+                    prev_correct_cmd = True
+
+
 def process_stream():
     drone_stream = pylwdrone.LWDrone()
     #TODO: heartbeat?
     #TODO: error catching for when drone was not on
+    global last_frame
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
     prev_correct_cmd = False    # True means that we have sent out a correction to the drone
-    global counter
-    counter += 1
-    cnt = 0
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
         start = time()
         framedatas=decoder.decode(bytes(_frame.frame_bytes))
-        cnt += 1
-        # Rough frame-rate reducer
-        if cnt != 3:
-            continue
-        else:
-            cnt = 0
         for framedata in framedatas:
             (frame, w, h, ls) = framedata
             if frame is not None:
@@ -119,25 +150,10 @@ def process_stream():
                 frame = frame.reshape((h, ls//3, 3))
                 frame = frame[:,:w,:]
                 frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
-                frame, suggested_correction = hoop_detector.process_frame(frame)
-                set_stream_surface(frame)
-                if hoop_flying_enabled:
-                    if suggested_correction == None and prev_correct_cmd:
-                        print("all to 0: ")
-                        drone.set_roll(0)
-                        drone.set_throttle(0)
-                        prev_correct_cmd = False
-                    else:
-                        if suggested_correction \
-                          and suggested_correction[0] \
-                          and suggested_correction[1]:
-                            print("Setting_roll: ",
-                                  suggested_correction[0]*tickers['roll'].value)
-                            drone.set_roll(suggested_correction[0]*tickers['roll'].value)
-                            print("Setting_throttle: ",
-                                  suggested_correction[1]*tickers['throttle'].value)
-                            drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
-                            prev_correct_cmd = True
+                with last_frame_lock:
+                    last_frame = frame
+                if not hoop_flying_enabled:
+                    set_stream_surface(frame)
         if PRINT_LOOPTIME:
             print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
@@ -156,6 +172,9 @@ if not args.no_connect:
 
     stream_thread = Thread(target=process_stream, args=())
     stream_thread.start()
+
+    hoop_fly_thread = Thread(target=hoop_flying, args=())
+    hoop_fly_thread.start()
 
 
 while running:
