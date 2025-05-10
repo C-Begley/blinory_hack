@@ -127,7 +127,7 @@ def hoop_flying():
     prev_correct_cmd = False    # True means that we have sent out a correction to the drone
     avcor = (0,0)   #Moving average for corrections
     csvfile = open('corrections.csv', 'w')
-    csvwriter = csvwriter(csvfile)
+    csvwriter = csv.writer(csvfile)
     while running:
         if not hoop_flying_enabled:
             sleep(0.2)
