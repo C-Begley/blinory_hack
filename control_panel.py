@@ -393,6 +393,13 @@ def process_events():
 
 args = parse_args()
 
+
+# Before doing anything, show a pretty screen already (instead of a black square)
+logo = pygame.image.load("Redwire_logo.svg")
+screen.fill(WHITE)
+screen.blit(logo, [80,275])
+pygame.display.flip()
+
 # Main loop
 if not args.no_connect:
     if auto_connect() < 0:  #TODO: maybe make this one configurable? On/Off?
