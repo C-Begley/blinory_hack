@@ -251,6 +251,8 @@ def process_stream():
     #       Maybe we should add some retry mechanism here for that?
     #       Or maybe a simple sleep of a second or two will do?
     global last_frame
+    set_stream_prescaler = 0
+    set_stream_prescale_div = 3
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
     while running:
@@ -267,10 +269,16 @@ def process_stream():
                         frame = frame.reshape((h, ls//3, 3))
                         frame = frame[:,:w,:]
                         frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
+                        # print("New frame ready!")
                         with last_frame_lock:
+                            # print("New frame written!")
                             last_frame = frame
                         if not hoop_flying_enabled:
-                            set_stream_surface(frame)
+                            if set_stream_prescaler == set_stream_prescale_div:
+                                set_stream_surface(frame)
+                                set_stream_prescaler = 0
+                            else:
+                                set_stream_prescaler += 1
                 if PRINT_LOOPTIME:
                     print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
         except Exception as e:  #TODO: narrow exception down
