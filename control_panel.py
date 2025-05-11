@@ -126,7 +126,7 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 1, 0.5, label_text="Smoothing", step=0.1),
+        "smoothing":         Ticker(50, 650, 0, 1, 2, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 0, label_text="cRoll", step=5),
@@ -149,18 +149,16 @@ def set_stream_surface(frame):
     frame = pygame.transform.scale(frame, (700,394))
     stream_surface = frame
 
-# alpha: smoothing strength. Range: 0-1
+# factor: smoothing strength. Range: 0-...
 # theta: dynamic adjustment of alpha. Used when the prediction is uncertain.
 #        Range: 0-1: 1 = take fully into consideration, 0 = ignore this value
-def smoothen_correction(avcor, sugcor, alpha=0.1, theta=1):
-    assert 0 < alpha < 1
-    if alpha == 1:
-        alpha = alpha*0.95  #Otherwise there's no actual data used at all...
-
+def smoothen_correction(avcor, sugcor, factor, theta=1):
+    assert 0 <= factor
+    alpha = 1/(factor+1)    # The higher the factor, the smaller alpha
     alpha = alpha*theta
 
-    avcor0 = alpha * avcor[0] + (1 - alpha) * sugcor[0]
-    avcor1 = alpha * avcor[1] + (1 - alpha) * sugcor[1]
+    avcor0 = alpha * sugcor[0] + (1 - alpha) * avcor[0]
+    avcor1 = alpha * sugcor[1] + (1 - alpha) * avcor[1]
 
     return (avcor0, avcor1)
 
