@@ -44,6 +44,8 @@ hoop_flying_enabled = False
 # We will store the frame globally to share it between threads
 last_frame = None
 last_frame_lock = Lock()
+last_hoop_detector_frame = None
+last_hoop_detector_frame_lock = Lock()
 
 def parse_args():
     parser = ArgumentParser(
@@ -139,9 +141,16 @@ tickers = {
         "cThrottle":    Ticker(650, 700, -100, 100, 0, label_text="cThrottle", step=5),
 }
 
-def set_stream_surface(frame):
+def blit_stream(screen):
     global stream_surface
-    frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR -> Convert back to RGB for Pygame
+    if hoop_flying_enabled:
+        frame = last_hoop_detector_frame
+    else:
+        frame = last_frame
+    if frame is None:
+        print("Stream wasn't available yet...")
+        return
+    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR -> Convert back to RGB for Pygame
     frame = np.rot90(frame) #Why is this suddenly necessary? Wasn't needed before?
     # For some reason the image feed was mirrored. Fixed it here.
     # HOWEVER! This is under the assumption that the hoop detector still gets the correct feed!
@@ -151,7 +160,9 @@ def set_stream_surface(frame):
     frame = pygame.surfarray.make_surface(frame)
     #NOTE: stream aspect ratio = 1.7777
     frame = pygame.transform.scale(frame, (700,394))
-    stream_surface = frame
+    #TODO: I'd like these coords to be better defined. Maybe relative to the UI lements.
+    #       On top of that: I'd also like to have the stream in its own UI-element class.
+    screen.blit(frame, (275, 200))
 
 # factor: smoothing strength. Range: 0-...
 # theta: dynamic adjustment of alpha. Used when the prediction is uncertain.
@@ -169,6 +180,8 @@ def smoothen_correction(avcor, sugcor, factor, theta=1):
 def hoop_flying():
     # global last_frame
     global last_frame_lock
+    global last_hoop_detector_frame_lock
+    global last_hoop_detector_frame
     prev_correct_cmd = False    # True means that we have sent out a correction to the drone
     avcor = (0,0)   #Moving average for corrections
     csvfile = open('corrections.csv', 'w')
@@ -184,7 +197,8 @@ def hoop_flying():
             sleep(0.5)
             continue
         frame, suggested_correction, certainty = hoop_detector.process_frame(frame)
-        set_stream_surface(frame)
+        with last_hoop_detector_frame_lock:
+            last_hoop_detector_frame = frame
         if suggested_correction == None and prev_correct_cmd:
             if lost_lock_frame_count < 25:
                 print("Didn't find new correction in this frame. Continueing previous correction for now.")
@@ -251,8 +265,6 @@ def process_stream():
     #       Maybe we should add some retry mechanism here for that?
     #       Or maybe a simple sleep of a second or two will do?
     global last_frame
-    set_stream_prescaler = 0
-    set_stream_prescale_div = 3
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
     while running:
@@ -262,6 +274,8 @@ def process_stream():
                     break
                 start = time()
                 framedatas=decoder.decode(bytes(_frame.frame_bytes))
+                #TODO: In theory we could also move this for-loop out of this thread,
+                #       but in practice it appears this one takes less than 1ms.
                 for framedata in framedatas:
                     (frame, w, h, ls) = framedata
                     if frame is not None:
@@ -269,16 +283,8 @@ def process_stream():
                         frame = frame.reshape((h, ls//3, 3))
                         frame = frame[:,:w,:]
                         frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
-                        # print("New frame ready!")
                         with last_frame_lock:
-                            # print("New frame written!")
                             last_frame = frame
-                        if not hoop_flying_enabled:
-                            if set_stream_prescaler == set_stream_prescale_div:
-                                set_stream_surface(frame)
-                                set_stream_prescaler = 0
-                            else:
-                                set_stream_prescaler += 1
                 if PRINT_LOOPTIME:
                     print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
         except Exception as e:  #TODO: narrow exception down
@@ -410,10 +416,7 @@ while running:
     for ticker in tickers.values():
         ticker.draw(screen)
 
-    if stream_surface:
-        #TODO: I'd like these coords to be better defined. Maybe relative to the UI lements.
-        #       On top of that: I'd also like to have the stream in its own UI-element class.
-        screen.blit(stream_surface, (275, 200))
+    blit_stream(screen)
 
     pygame.display.flip()
 
