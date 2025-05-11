@@ -253,24 +253,31 @@ def process_stream():
     global last_frame
     decoder = h264decoder.H264Decoder()
     hoop_detector.set_frame_dimensions((1152, 2048))
-    for _frame in drone_stream.start_video_stream():
-        if not running:
-            break
-        start = time()
-        framedatas=decoder.decode(bytes(_frame.frame_bytes))
-        for framedata in framedatas:
-            (frame, w, h, ls) = framedata
-            if frame is not None:
-                frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
-                frame = frame.reshape((h, ls//3, 3))
-                frame = frame[:,:w,:]
-                frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
-                with last_frame_lock:
-                    last_frame = frame
-                if not hoop_flying_enabled:
-                    set_stream_surface(frame)
-        if PRINT_LOOPTIME:
-            print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
+    while running:
+        try:
+            for _frame in drone_stream.start_video_stream():
+                if not running:
+                    break
+                start = time()
+                framedatas=decoder.decode(bytes(_frame.frame_bytes))
+                for framedata in framedatas:
+                    (frame, w, h, ls) = framedata
+                    if frame is not None:
+                        frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
+                        frame = frame.reshape((h, ls//3, 3))
+                        frame = frame[:,:w,:]
+                        frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
+                        with last_frame_lock:
+                            last_frame = frame
+                        if not hoop_flying_enabled:
+                            set_stream_surface(frame)
+                if PRINT_LOOPTIME:
+                    print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
+        except Exception as e:  #TODO: narrow exception down
+            print("Failed to start video stream. Trying again in 1 second...")
+            print(e)
+            sleep(1)
+
 
 
 args = parse_args()
