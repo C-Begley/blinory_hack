@@ -67,21 +67,25 @@ def drone_emergency_stop():
 
 def drone_set_throttle(val):
     val += tickers["cThrottle"].value
+    print("Setting_throttle: ", val)
     drone.set_throttle(val)
     sliders[0].set_value(val)
 
 def drone_set_pitch(val):
     val += tickers["cPitch"].value
+    print("Setting_pitch: ", val)
     drone.set_pitch(val)
     sliders[1].set_value(val)
 
 def drone_set_roll(val):
     val += tickers["cRoll"].value
+    print("Setting_roll: ", val)
     drone.set_roll(val)
     sliders[3].set_value(val)
 
 def drone_set_yaw(val):
     val += tickers["cYaw"].value
+    print("Setting_yaw: ", val)
     drone.set_yaw(val)
     sliders[2].set_value(val)
 
@@ -169,6 +173,7 @@ def hoop_flying():
     avcor = (0,0)   #Moving average for corrections
     csvfile = open('corrections.csv', 'w')
     csvwriter = csv.writer(csvfile)
+    lost_lock_frame_count = 0
     while running:
         if not hoop_flying_enabled:
             sleep(0.2)
@@ -181,11 +186,17 @@ def hoop_flying():
         frame, suggested_correction, certainty = hoop_detector.process_frame(frame)
         set_stream_surface(frame)
         if suggested_correction == None and prev_correct_cmd:
-            print("all to 0: ")
-            drone_set_roll(0)
-            drone_set_throttle(0)
-            prev_correct_cmd = False
-            csvwriter.writerow([time(),0,0,0,0])
+            if lost_lock_frame_count < 25:
+                print("Didn't find new correction in this frame. Continueing previous correction for now.")
+                drone_set_roll(avcor[0]*tickers['roll'].value)
+                drone_set_throttle(avcor[1]*tickers['throttle'].value)
+                lost_lock_frame_count += 1
+            else:
+                print("lost track of hoop. Setting all back to 0")
+                drone_set_roll(0)
+                drone_set_throttle(0)
+                prev_correct_cmd = False
+                csvwriter.writerow([time(),0,0,0,0])
         else:
             if suggested_correction \
               and suggested_correction[0] \
@@ -205,13 +216,10 @@ def hoop_flying():
                                             suggested_correction,
                                             tickers['smoothing'].value, theta=theta)
                 #TODO: show these on CP instead of printing
-                # print("Setting_roll: ",
-                #       avcor[0]*tickers['roll'].value)
                 drone_set_roll(avcor[0]*tickers['roll'].value)
-                # print("Setting_throttle: ",
-                #       avcor[1]*tickers['throttle'].value)
                 drone_set_throttle(avcor[1]*tickers['throttle'].value)
                 prev_correct_cmd = True
+                lost_lock_frame_count = 0
                 #Determine if we're confident enough to fly through
                 #TODO: I think ideally the threshold should be a function of the distance to the hoop.
                 #NOTE: This doesn't take into account the corrections for pitch. That's okay for now.
