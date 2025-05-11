@@ -120,8 +120,8 @@ sliders = [
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         # Hoop fly aggressiveness
-        "roll":         Ticker(220, 100, -10, 10, 1.2, label_text="×Roll:", step=0.1),
-        "throttle":     Ticker(420, 100, -10, 10, 1.2, label_text="×Throttle:", step=0.1),
+        "roll":         Ticker(220, 100, -10, 10, 1.0, label_text="×Roll:", step=0.1),
+        "throttle":     Ticker(420, 100, -10, 10, 1.0, label_text="×Throttle:", step=0.1),
         "pitch":        Ticker(220, 150, 0, 100, 10, label_text="vPitch:", step=0.1),
         # Threshold before moving forward
         "fwdthresh":    Ticker(420, 150, 0, 50, 0, label_text="ΔThr", step=5),
@@ -135,7 +135,7 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 50, 2, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 8, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 0, label_text="cRoll", step=5),
