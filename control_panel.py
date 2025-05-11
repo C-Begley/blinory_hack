@@ -301,6 +301,7 @@ def process_events():
     global running
     global hoop_flying_enabled
     current_slider = None
+    clock = pygame.time.Clock()
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -388,6 +389,7 @@ def process_events():
                         drone_set_yaw(0)
                     case pygame.K_e:
                         drone_set_yaw(0)
+        clock.tick(60)
 
 args = parse_args()
 
@@ -408,6 +410,7 @@ events_thread = Thread(target=process_events, args=())
 events_thread.start()
 
 
+clock = pygame.time.Clock()
 while running:
     screen.fill(WHITE)
 
@@ -422,8 +425,8 @@ while running:
         ticker.draw(screen)
 
     blit_stream(screen)
-
     pygame.display.flip()
+    clock.tick(60)
 
 if not args.no_connect:
     print("Waiting for stream thread to stop...")
