@@ -66,22 +66,22 @@ def drone_emergency_stop():
     drone.emergency_stop()
 
 def drone_set_throttle(val):
-    val += ticker["cThrottle"].value
+    val += tickers["cThrottle"].value
     drone.set_throttle(val)
     sliders[0].set_value(val)
 
 def drone_set_pitch(val):
-    val += ticker["cPitch"].value
+    val += tickers["cPitch"].value
     drone.set_pitch(val)
     sliders[1].set_value(val)
 
 def drone_set_roll(val):
-    val += ticker["cRoll"].value
+    val += tickers["cRoll"].value
     drone.set_roll(val)
     sliders[3].set_value(val)
 
 def drone_set_yaw(val):
-    val += ticker["cYaw"].value
+    val += tickers["cYaw"].value
     drone.set_yaw(val)
     sliders[2].set_value(val)
 
@@ -228,7 +228,7 @@ def hoop_flying():
                     # Reduce correction on vertical axis due to camera going down
                     drone_set_throttle(avcor[1]
                                        * tickers["throttle"].value
-                                       / (ticker["pitch_v_corr"]+1))
+                                       / (tickers["pitch_v_corr"]+1))
                 else:
                     drone_set_pitch(0)
 
