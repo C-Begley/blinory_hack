@@ -305,6 +305,7 @@ def process_events():
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                drone_emergency_stop()
                 running = False
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
