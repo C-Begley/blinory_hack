@@ -401,9 +401,10 @@ args = parse_args()
 
 
 # Before doing anything, show a pretty screen already (instead of a black square)
-logo = pygame.image.load("Redwire_logo.svg")
+logo = pygame.image.load("Redwire_logo.png")
+logo = pygame.transform.scale_by(logo, 0.8)
 screen.fill(WHITE)
-screen.blit(logo, [80,275])
+screen.blit(logo, [20,125])
 pygame.display.flip()
 
 # Main loop
