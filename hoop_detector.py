@@ -396,7 +396,7 @@ def main():
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
         frame_dimensions = frame.shape
-        output, suggested_correction = process_frame(frame)
+        output, suggested_correction, _  = process_frame(frame)
         cv2.imshow("Countours", make_size_reasonable(output))
         while True:
             k = cv2.waitKey(0)
@@ -414,7 +414,7 @@ def main():
             if not ret:
                 print("No more frames? Stream end?")
                 break
-            output, suggested_correction= process_frame(frame)
+            output, suggested_correction, _ = process_frame(frame)
             key = cv2.waitKey(1)
             if key == ord(' '):
                 while True:
@@ -454,7 +454,7 @@ def main():
                     frame = frame[:,:w,:]
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  #TODO: make more efficient
                                                                     # by not doing 2 conversions
-                    output, suggested_correction= process_frame(frame)
+                    output, suggested_correction, _ = process_frame(frame)
                     key = cv2.waitKey(1)
                     if key == ord(' '):
                         while True:
