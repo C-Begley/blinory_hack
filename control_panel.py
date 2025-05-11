@@ -228,6 +228,11 @@ def hoop_flying():
                         theta = 0.3
                     case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
                         theta = 0.1
+                    case hoop_detector.PredictionCertainty.NONE:
+                        theta = 0.01
+                    case default:
+                        print("???", certainty)
+                        theta = 0
                 avcor = smoothen_correction(avcor,
                                             suggested_correction,
                                             tickers['smoothing'].value, theta=theta)
