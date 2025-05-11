@@ -250,7 +250,7 @@ def hoop_flying():
                     # Reduce correction on vertical axis due to camera going down
                     drone_set_throttle(avcor[1]
                                        * tickers["throttle"].value
-                                       / (tickers["pitch_v_corr"]+1))
+                                       / (tickers["pitch_v_corr"].value+1))
                 else:
                     drone_set_pitch(0)
 
