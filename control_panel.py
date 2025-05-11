@@ -130,7 +130,7 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 1, 2, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 2, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 0, label_text="cRoll", step=5),
