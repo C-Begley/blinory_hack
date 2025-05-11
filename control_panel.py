@@ -139,6 +139,11 @@ def set_stream_surface(frame):
     global stream_surface
     frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR -> Convert back to RGB for Pygame
     frame = np.rot90(frame) #Why is this suddenly necessary? Wasn't needed before?
+    # For some reason the image feed was mirrored. Fixed it here.
+    # HOWEVER! This is under the assumption that the hoop detector still gets the correct feed!
+    # If it appears incorrect, we will need to perform this flip before sending it to
+    # the hoop detector!
+    frame = cv2.flip(frame,0)
     frame = pygame.surfarray.make_surface(frame)
     #NOTE: stream aspect ratio = 1.7777
     frame = pygame.transform.scale(frame, (700,394))
