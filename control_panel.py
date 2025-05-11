@@ -47,6 +47,9 @@ last_frame_lock = Lock()
 last_hoop_detector_frame = None
 last_hoop_detector_frame_lock = Lock()
 
+running = True
+
+
 def parse_args():
     parser = ArgumentParser(
                     prog='Control panel',
@@ -148,7 +151,6 @@ def blit_stream(screen):
     else:
         frame = last_frame
     if frame is None:
-        print("Stream wasn't available yet...")
         return
     frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) # cv2 uses BGR -> Convert back to RGB for Pygame
     frame = np.rot90(frame) #Why is this suddenly necessary? Wasn't needed before?
@@ -292,14 +294,104 @@ def process_stream():
             print(e)
             sleep(1)
 
+def process_events():
+    #TODO: I'm more of a fan of doing the event handling INSIDE of the UI element classes.
+    #       E.g. have an "on_click()" method that calls the action.
+    # Event handling
+    global running
+    global hoop_flying_enabled
+    current_slider = None
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Check buttons
+                for btn in buttons:
+                    if btn.rect.collidepoint(event.pos):
+                        print(f"Button pressed: {btn.text}")
+                        btn.do_action()
+
+                for ticker in tickers.values():
+                    ticker.handle_event(event)
+                    #TODO: try to convert the other elements to also use this way of
+                    #       event handling. It's much cleaner.
+
+                # Check sliders
+                for slider in sliders:
+                    if slider.handle_rect.collidepoint(event.pos):
+                        current_slider = slider
+                        slider.dragging = True
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if current_slider:
+                    if current_slider.snap_back:
+                        current_slider.reset_to_initial()
+                    current_slider.dragging = False
+                    current_slider = None
+
+            elif event.type == pygame.MOUSEMOTION:
+                if current_slider and current_slider.dragging:
+                    current_slider.update_value(event.pos)
+                    # Add real-time controls here
+                    current_slider.do_action()
+            #TODO: instead of relying on KEYUP and KEYDON events,
+            #       I'd say it's way more reliable to just check if a key is pressed in a loop
+            #       and set status based on that
+            #TODO: Ideally, the sliders also reflect what's going on here.
+            elif event.type == pygame.KEYDOWN:
+                match event.key:
+                    case pygame.K_SPACE:
+                        drone_emergency_stop()
+                    case pygame.K_ESCAPE:
+                        drone_emergency_stop()
+                    case pygame.K_r:
+                        drone_set_throttle(tickers['manual_throttle_speed'].value)
+                    case pygame.K_f:
+                        drone_set_throttle(-tickers['manual_throttle_speed'].value)
+                    case pygame.K_a:
+                        drone_set_roll(-tickers['manual_roll_speed'].value)
+                    case pygame.K_d:
+                        drone_set_roll(tickers['manual_roll_speed'].value)
+                    case pygame.K_w:
+                        drone_set_pitch(tickers['manual_pitch_speed'].value)
+                    case pygame.K_s:
+                        drone_set_pitch(-tickers['manual_pitch_speed'].value)
+                    case pygame.K_q:
+                        drone_set_yaw(-tickers['manual_yaw_speed'].value)
+                    case pygame.K_e:
+                        drone_set_yaw(tickers['manual_yaw_speed'].value)
+                    case pygame.K_RETURN:
+                        drone.lift_off()
+                    case pygame.K_BACKSPACE:
+                        drone_land()
+                    case pygame.K_h:
+                        hoop_flying_enabled = not hoop_flying_enabled
+                        print("Hoop flying: ", hoop_flying_enabled)
+                        #TODO: shop with indicator on UI? Color changing button?
+            elif event.type == pygame.KEYUP:
+                match event.key:
+                    case pygame.K_r:
+                        drone_set_throttle(0)
+                    case pygame.K_f:
+                        drone_set_throttle(0)
+                    case pygame.K_a:
+                        drone_set_roll(0)
+                    case pygame.K_d:
+                        drone_set_roll(0)
+                    case pygame.K_w:
+                        drone_set_pitch(0)
+                    case pygame.K_s:
+                        drone_set_pitch(0)
+                    case pygame.K_q:
+                        drone_set_yaw(0)
+                    case pygame.K_e:
+                        drone_set_yaw(0)
 
 args = parse_args()
 
 # Main loop
-running = True
-current_slider = None
-
 if not args.no_connect:
     if auto_connect() < 0:  #TODO: maybe make this one configurable? On/Off?
         print("Error connecting to drone. Was it on?")
@@ -312,99 +404,12 @@ if not args.no_connect:
     hoop_fly_thread = Thread(target=hoop_flying, args=())
     hoop_fly_thread.start()
 
+events_thread = Thread(target=process_events, args=())
+events_thread.start()
+
 
 while running:
     screen.fill(WHITE)
-
-    #TODO: I'm more of a fan of doing the event handling INSIDE of the UI element classes.
-    #       E.g. have an "on_click()" method that calls the action.
-    # Event handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            # Check buttons
-            for btn in buttons:
-                if btn.rect.collidepoint(event.pos):
-                    print(f"Button pressed: {btn.text}")
-                    btn.do_action()
-
-            for ticker in tickers.values():
-                ticker.handle_event(event)
-                #TODO: try to convert the other elements to also use this way of
-                #       event handling. It's much cleaner.
-
-            # Check sliders
-            for slider in sliders:
-                if slider.handle_rect.collidepoint(event.pos):
-                    current_slider = slider
-                    slider.dragging = True
-
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if current_slider:
-                if current_slider.snap_back:
-                    current_slider.reset_to_initial()
-                current_slider.dragging = False
-                current_slider = None
-
-        elif event.type == pygame.MOUSEMOTION:
-            if current_slider and current_slider.dragging:
-                current_slider.update_value(event.pos)
-                # Add real-time controls here
-                current_slider.do_action()
-        #TODO: instead of relying on KEYUP and KEYDON events,
-        #       I'd say it's way more reliable to just check if a key is pressed in a loop
-        #       and set status based on that
-        #TODO: Ideally, the sliders also reflect what's going on here.
-        elif event.type == pygame.KEYDOWN:
-            match event.key:
-                case pygame.K_SPACE:
-                    drone_emergency_stop()
-                case pygame.K_ESCAPE:
-                    drone_emergency_stop()
-                case pygame.K_r:
-                    drone_set_throttle(tickers['manual_throttle_speed'].value)
-                case pygame.K_f:
-                    drone_set_throttle(-tickers['manual_throttle_speed'].value)
-                case pygame.K_a:
-                    drone_set_roll(-tickers['manual_roll_speed'].value)
-                case pygame.K_d:
-                    drone_set_roll(tickers['manual_roll_speed'].value)
-                case pygame.K_w:
-                    drone_set_pitch(tickers['manual_pitch_speed'].value)
-                case pygame.K_s:
-                    drone_set_pitch(-tickers['manual_pitch_speed'].value)
-                case pygame.K_q:
-                    drone_set_yaw(-tickers['manual_yaw_speed'].value)
-                case pygame.K_e:
-                    drone_set_yaw(tickers['manual_yaw_speed'].value)
-                case pygame.K_RETURN:
-                    drone.lift_off()
-                case pygame.K_BACKSPACE:
-                    drone_land()
-                case pygame.K_h:
-                    hoop_flying_enabled = not hoop_flying_enabled
-                    print("Hoop flying: ", hoop_flying_enabled)
-                    #TODO: shop with indicator on UI? Color changing button?
-        elif event.type == pygame.KEYUP:
-            match event.key:
-                case pygame.K_r:
-                    drone_set_throttle(0)
-                case pygame.K_f:
-                    drone_set_throttle(0)
-                case pygame.K_a:
-                    drone_set_roll(0)
-                case pygame.K_d:
-                    drone_set_roll(0)
-                case pygame.K_w:
-                    drone_set_pitch(0)
-                case pygame.K_s:
-                    drone_set_pitch(0)
-                case pygame.K_q:
-                    drone_set_yaw(0)
-                case pygame.K_e:
-                    drone_set_yaw(0)
 
     # Draw UI elements
     for btn in buttons:
@@ -421,8 +426,12 @@ while running:
     pygame.display.flip()
 
 if not args.no_connect:
+    print("Waiting for stream thread to stop...")
     stream_thread.join()
+    print("Waiting for hoop fly thread to stop...")
     hoop_fly_thread.join()
+    print("Waiting for events thread to stop...")
+    events_thread.join()
 pygame.quit()
 sys.exit()
 
