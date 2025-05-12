@@ -222,8 +222,6 @@ def hoop_flying():
                         theta = 1
                     case hoop_detector.PredictionCertainty.RELIABLE:
                         theta = 0.75
-                    case hoop_detector.PredictionCertainty.RELIABLE:
-                        theta = 0.5
                     case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
                         theta = 0.3
                     case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
