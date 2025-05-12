@@ -199,7 +199,8 @@ def hoop_flying():
         if frame is None:
             sleep(0.5)
             continue
-        frame, suggested_correction, certainty = hoop_detector.process_frame(frame)
+        frame, suggested_correction, certainty, estimated_distance \
+                = hoop_detector.process_frame(frame)
         with last_hoop_detector_frame_lock:
             last_hoop_detector_frame = frame
         if suggested_correction == None and prev_correct_cmd:

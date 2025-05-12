@@ -243,7 +243,9 @@ def calculate_correction(cp):
 def process_frame(frame):
     #TODO: the arrow drawing functions in this function can easily be refactored so we only
     #       need to call it once.
-    rect_to_draw = None     #(point, dims, color, line_width)
+    w = None
+    h = None
+    rect_to_draw = None     #(point1, point2, color, line_width)
     circle_to_draw = None   #(point, size, color, line_width)
     arrows_to_draw = []    #(point1, point2, color, line_width)
 
@@ -252,6 +254,8 @@ def process_frame(frame):
 
     cX = None
     cY = None
+
+    estimated_distance = -1 # -1 = invalid / unknown
 
     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = mask_frame(frame_hsv)
@@ -381,12 +385,18 @@ def process_frame(frame):
         for arrow_to_draw in arrows_to_draw:
             cv2.arrowedLine(output_contours, *arrow_to_draw)
 
+    if rect_to_draw:
+        x_rat = frame_dimensions[0] / w
+        y_rat = frame_dimensions[1] / h
+        estimated_distance = (x_rat+y_rat)/2
+        # print(f"Estimated distance: {estimated_distance}")
+
     if cX != None and cY != None:
         suggested_correction = calculate_correction((cX, cY))
     else:
         suggested_correction = None
 
-    return output_contours, suggested_correction, certainty
+    return output_contours, suggested_correction, certainty, estimated_distance
 
 # TODO: I'm not a big fan of this. Need a more reliable way of doing things.
 def set_frame_dimensions(shape):
@@ -400,7 +410,7 @@ def main():
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
         frame_dimensions = frame.shape
-        output, suggested_correction, _  = process_frame(frame)
+        output, suggested_correction, _ , _  = process_frame(frame)
         cv2.imshow("Countours", make_size_reasonable(output))
         while True:
             k = cv2.waitKey(0)
@@ -418,7 +428,7 @@ def main():
             if not ret:
                 print("No more frames? Stream end?")
                 break
-            output, suggested_correction, _ = process_frame(frame)
+            output, suggested_correction, _, _ = process_frame(frame)
             key = cv2.waitKey(1)
             if key == ord(' '):
                 while True:
@@ -458,7 +468,7 @@ def main():
                     frame = frame[:,:w,:]
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  #TODO: make more efficient
                                                                     # by not doing 2 conversions
-                    output, suggested_correction, _ = process_frame(frame)
+                    output, suggested_correction, _, _ = process_frame(frame)
                     key = cv2.waitKey(1)
                     if key == ord(' '):
                         while True:
