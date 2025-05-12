@@ -102,6 +102,7 @@ buttons = [
     Button(200, 50, 120, 40, "Land", RED, action=drone_land),
     Button(350, 50, 200, 40, "Emergency Stop", RED, action=drone_emergency_stop),
     Button(600, 50, 120, 40, "Exit", BLUE, action=exit),
+    Button(750, 50, 120, 40, "??", YELLOW, action=drone.mystery_command),
     Button(50, 100, 120, 40, "Activate", GREEN, action=drone.activate),
 ]
 
