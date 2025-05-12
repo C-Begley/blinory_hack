@@ -10,6 +10,7 @@ BASE_MSG = [ 0x66, 0x14, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, \
 CODE_LIFT_OFF = 0x01
 CODE_LAND = 0x80
 CODE_STOP = 0x2
+CODE_MYSTERY = 0x4
 COMMAND_SEND_N = 21
 COMMAND_SEND_DELTA = 0.049
 
@@ -150,6 +151,16 @@ class Drone:
             sleep(COMMAND_SEND_DELTA)
         self.pause_idle = False
         self.deactivate()
+
+    def mystery_command(self):
+        if VERBOSE:
+            print("Mystery command")
+        self.pause_idle = True
+        for _ in range(COMMAND_SEND_N):
+            self.send_msg(self.craft_msg(cmd=CODE_MYSTERY))
+            sleep(COMMAND_SEND_DELTA)
+        self.pause_idle = False
+        self.activate()
 
     def send_idle(self):
         self.send_msg(self.craft_msg())
