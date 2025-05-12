@@ -243,8 +243,8 @@ def calculate_correction(cp):
 def process_frame(frame):
     #TODO: the arrow drawing functions in this function can easily be refactored so we only
     #       need to call it once.
-    rects_to_draw = []     #(point, dims, color, line_width)
-    circles_to_draw = []   #(point, size, color, line_width)
+    rect_to_draw = None     #(point, dims, color, line_width)
+    circle_to_draw = None   #(point, size, color, line_width)
     arrows_to_draw = []    #(point1, point2, color, line_width)
 
     suggested_correction = (0, 0)
@@ -268,10 +268,10 @@ def process_frame(frame):
                 certainty = PredictionCertainty.NOISY_PREDICTION
             else:
                 certainty = PredictionCertainty.RELIABLE
-            rects_to_draw.append(((x-50,y-50),(x+w+50,y+h+50),(0,255,0),8))
+            rect_to_draw = ((x-50,y-50),(x+w+50,y+h+50),(0,255,0),8)
             cX = int(x + w/2)
             cY = int(y + h/2)
-            circles_to_draw.append(((cX,cY), 10, (0, 255, 0), -1))
+            circle_to_draw = ((cX,cY), 10, (0, 255, 0), -1)
         elif len(inliers) == 2:
             certainty = PredictionCertainty.DIRECTION_ESTIMATE
             if abs(inliers[1][0] - inliers[0][0]) > abs(inliers[1][1] - inliers[0][1]):
@@ -374,9 +374,9 @@ def process_frame(frame):
         #       by checking the segment sizes.
         #       Larger size = closer to hoop --> less agressive controlling of drone
     if DRAW:
-        for rect_to_draw in rects_to_draw:
+        if rect_to_draw:
             cv2.rectangle(output_contours, *rect_to_draw)
-        for circle_to_draw in circles_to_draw:
+        if circle_to_draw:
             cv2.circle(output_contours, *circle_to_draw)
         for arrow_to_draw in arrows_to_draw:
             cv2.arrowedLine(output_contours, *arrow_to_draw)
