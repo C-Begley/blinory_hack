@@ -25,17 +25,21 @@ blue_hsv_upper = np.array([125, 255, 150])
 # List of Tuple(list[3], list[3]))
 color_ranges_red = []
 # orange_outside_shadow.png
-color_ranges_red.append((np.array([174, 150, 82]),np.array([179, 255, 255])))
-color_ranges_red.append((np.array([0, 195, 237]), np.array([4, 255, 252])))
-# orange_outside_shadow2.png
-color_ranges_red.append((np.array([174, 166, 237]), np.array([179, 204, 255])))
-color_ranges_red.append((np.array([0, 219, 241]), np.array([2, 255, 245])))
-# orange_outside_shadow_sun.png
-color_ranges_red.append((np.array([164, 163, 180]), np.array([179, 186, 255])))
-color_ranges_red.append((np.array([0, 225, 241]), np.array([5, 255, 249])))
-# orange_outside_shadow_sun2.png
-color_ranges_red.append((np.array([0, 204, 235]), np.array([4, 255, 255])))
-color_ranges_red.append((np.array([175, 156, 210]), np.array([179, 255, 243])))
+#color_ranges_red.append((np.array([174, 150, 82]),np.array([179, 255, 255])))
+#color_ranges_red.append((np.array([0, 195, 237]), np.array([4, 255, 252])))
+## orange_outside_shadow2.png
+#color_ranges_red.append((np.array([174, 166, 237]), np.array([179, 204, 255])))
+#color_ranges_red.append((np.array([0, 219, 241]), np.array([2, 255, 245])))
+## orange_outside_shadow_sun.png
+#color_ranges_red.append((np.array([164, 163, 180]), np.array([179, 186, 255])))
+#color_ranges_red.append((np.array([0, 225, 241]), np.array([5, 255, 249])))
+## orange_outside_shadow_sun2.png
+#color_ranges_red.append((np.array([0, 204, 235]), np.array([4, 255, 255])))
+#color_ranges_red.append((np.array([175, 156, 210]), np.array([179, 255, 243])))
+# Event area
+color_ranges_red.append((np.array([0, 155, 210]), np.array([9, 205, 243])))
+color_ranges_red.append((np.array([178, 124, 196]), np.array([179, 194, 255])))
+
 
 # TODO: --> args?
 MODE = "cam"
