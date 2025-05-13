@@ -1,7 +1,7 @@
 import nmcli
 from time import sleep
 
-iface = "wlp6s0"    #TODO: make configurable
+iface = "wlp3s0"    #TODO: make configurable
 ap_name = "BLINORY"
 
 n_attempts = 20     #20 attempts to find network and connect

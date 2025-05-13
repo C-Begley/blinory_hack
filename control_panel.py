@@ -12,8 +12,6 @@ import numpy as np
 import pygame
 import pylwdrone
 import sys
-
-sys.sys.path.append("led_drawning")
 import pattern_to_draw as led
 
 # Initialize Pygame here, because otherwise you can't use fonts in libs... (stupid design imho..)
