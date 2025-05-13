@@ -1,5 +1,5 @@
-import csv
 import cv2  #TODO: restrict? Maybe not even needed if we go through the hoop_detector?
+from enum import Enum
 import h264decoder  #Note: this one had to be installed manually!
                     #       https://github.com/DaWelter/h264decoder
                     #       It also proved to be a challenge on Arch, because it's semi-broken
@@ -47,8 +47,17 @@ last_frame_lock = Lock()
 last_hoop_detector_frame = None
 last_hoop_detector_frame_lock = Lock()
 
+
 running = True
 
+class HoopFlyState(Enum):
+    NONE = 0,
+    LOCK = 1,
+    LOCK_FWD = 2,
+    YOLO_FWD = 3,
+
+hoop_fly_state = HoopFlyState.NONE
+start_yolo_time = -1
 
 def parse_args():
     parser = ArgumentParser(
@@ -72,25 +81,25 @@ def drone_emergency_stop():
 
 def drone_set_throttle(val):
     val += tickers["cThrottle"].value
-    print("Setting_throttle: ", val)
+    # print("Setting_throttle: ", val)
     drone.set_throttle(val)
     sliders[0].set_value(val)
 
 def drone_set_pitch(val):
     val += tickers["cPitch"].value
-    print("Setting_pitch: ", val)
+    # print("Setting_pitch: ", val)
     drone.set_pitch(val)
     sliders[1].set_value(val)
 
 def drone_set_roll(val):
     val += tickers["cRoll"].value
-    print("Setting_roll: ", val)
+    # print("Setting_roll: ", val)
     drone.set_roll(val)
     sliders[3].set_value(val)
 
 def drone_set_yaw(val):
     val += tickers["cYaw"].value
-    print("Setting_yaw: ", val)
+    # print("Setting_yaw: ", val)
     drone.set_yaw(val)
     sliders[2].set_value(val)
 
@@ -123,11 +132,17 @@ tickers = {
         # Hoop fly aggressiveness
         "roll":         Ticker(220, 100, -10, 10, 1.0, label_text="×Roll:", step=0.1),
         "throttle":     Ticker(420, 100, -10, 10, 1.0, label_text="×Throttle:", step=0.1),
-        "pitch":        Ticker(220, 150, 0, 100, 10, label_text="vPitch:", step=0.1),
+        "pitch":        Ticker(620, 100, 0, 100, 10, label_text="vPitch:", step=0.1),
         # Threshold before moving forward
-        "fwdthresh":    Ticker(420, 150, 0, 50, 0, label_text="ΔThr", step=5),
+        #TODO: calibrate
+        "fwdthresh":    Ticker(220, 150, 0, 100, 30, label_text="ΔThr", step=5),
         # Correct camera movement when pitching forward
-        "pitch_v_corr": Ticker(620, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
+        #TODO: calibrate
+        "pitch_v_corr": Ticker(370, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
+        # Distance before YOLO state
+        "thr_yolo": Ticker(570, 150, 0, 10, 3, label_text="ThrYolo", step=0.5),
+        # Yolo forward speed
+        "vPitch_yolo": Ticker(770, 150, 0, 50, 10, label_text="vPitchYolo", step=1),
 
         # Manual flying speeds
         "manual_roll_speed":        Ticker(50, 600, 20, 100, 50, label_text="MvRoll", step=10),
@@ -136,7 +151,7 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 50, 8, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 15, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 0, label_text="cRoll", step=5),
@@ -174,23 +189,94 @@ def smoothen_correction(avcor, sugcor, factor, theta=1):
     assert 0 <= factor
     alpha = 1/(factor+1)    # The higher the factor, the smaller alpha
     alpha = alpha*theta
-
     avcor0 = alpha * sugcor[0] + (1 - alpha) * avcor[0]
     avcor1 = alpha * sugcor[1] + (1 - alpha) * avcor[1]
-
     return (avcor0, avcor1)
 
+def smoothen_distance(avdist, estdist, factor):
+    assert 0 <= factor
+    alpha = 1/(factor+1)    # The higher the factor, the smaller alpha
+    avdist = alpha * estdist + (1 - alpha) * avdist
+    return avdist
+
+def control_drone(corr, dist):
+    '''
+        FSM:
+            * NONE:
+                - Don't do anything. No hoop detected.
+                - #TODO: maybe search algorithm?
+                - corr != None? --> LOCK
+            * LOCK:
+                - Detect hoop, align with center
+                - corr < corr_fwd_thresh? --> LOCK_FWD
+            * LOCK_FWD
+                - Stay locked, but slowly pitch forward.
+                - Slightly adjust the correction for camera being brought down
+                - (distance < dist_thr) && (corr < corr_fwd_thresh)? --> YOLO_FWD
+            * YOLO_FWD
+                - Stop applying corrections to align with center
+                - Go forward at high speed
+                - Start counting time
+                - time > yolo_time? --> LOCK (on next hoop hoop color)
+                - Unless last color, in that case --> END
+            * END
+                - land command / Emergency stop
+    '''
+    #TODO: reverse state changes?
+
+    global hoop_fly_state
+    global start_yolo_time
+
+    yolo_time = 1000    #1000ms #TODO: make ticker?
+
+    if hoop_fly_state == HoopFlyState.NONE:
+        print("In HoopFlyState NONE")
+        if corr is not None:
+            hoop_fly_state = HoopFlyState.LOCK
+            #TODO: allow for some stabilization time? Will it help the drone?
+    elif hoop_fly_state == HoopFlyState.LOCK:
+        print("In HoopFlyState LOCK")
+        #TODO: show these on CP instead of printing
+        drone_set_roll(corr[0]*tickers['roll'].value)
+        drone_set_throttle(corr[1]*tickers['throttle'].value)
+        if max(corr[0], corr[1]) < tickers['fwdthresh'].value:
+            hoop_fly_state = HoopFlyState.LOCK_FWD
+    elif hoop_fly_state == HoopFlyState.LOCK_FWD:
+        print("In HoopFlyState LOCK_FWD")
+        drone_set_pitch(tickers["pitch"].value)
+        drone_set_roll(corr[0]*tickers['roll'].value)
+        drone_set_throttle(corr[1]
+                            * tickers['throttle'].value
+                            * (tickers["pitch_v_corr"].value+1))
+        if max(corr[0], corr[1]) < tickers['fwdthresh'].value:
+            hoop_fly_state = HoopFlyState.LOCK_FWD
+        if max(corr[0], corr[1]) < tickers['fwdthresh'].value \
+                and dist < tickers['thr_yolo'].value:
+            hoop_fly_state = HoopFlyState.YOLO_FWD
+    elif hoop_fly_state == HoopFlyState.YOLO_FWD:
+        print("In HoopFlyState YOLO_FWD")
+        drone_set_pitch(tickers["vPitch_yolo"].value)
+        drone_set_roll(0)
+        drone_set_throttle(0)
+        if start_yolo_time == -1:
+            start_yolo_time = time()
+        elif (time() - start_yolo_time) > yolo_time:
+            hoop_fly_state = HoopFlyState.END   #TODO: eventually we need to do the color
+                                                #changes first
+    elif hoop_fly_state == HoopFlyState.END:
+        print("In HoopFlyState END")
+        drone_land()
+    else:
+        print("Unknown state?! What's happening?!")
+
 def hoop_flying():
-    # global last_frame
     global last_frame_lock
     global last_hoop_detector_frame_lock
     global last_hoop_detector_frame
-    prev_correct_cmd = False    # True means that we have sent out a correction to the drone
     avcor = (0,0)   #Moving average for corrections
-    csvfile = open('corrections.csv', 'w')
-    csvwriter = csv.writer(csvfile)
-    lost_lock_frame_count = 0
+    avdist = 10
     while running:
+        start = time()
         if not hoop_flying_enabled:
             sleep(0.2)
             continue
@@ -203,65 +289,41 @@ def hoop_flying():
                 = hoop_detector.process_frame(frame)
         with last_hoop_detector_frame_lock:
             last_hoop_detector_frame = frame
-        if suggested_correction == None and prev_correct_cmd:
-            if lost_lock_frame_count < 25:
-                print("Didn't find new correction in this frame. Continueing previous correction for now.")
-                drone_set_roll(avcor[0]*tickers['roll'].value)
-                drone_set_throttle(avcor[1]*tickers['throttle'].value)
-                lost_lock_frame_count += 1
-            else:
-                print("lost track of hoop. Setting all back to 0")
-                drone_set_roll(0)
-                drone_set_throttle(0)
-                prev_correct_cmd = False
-                csvwriter.writerow([time(),0,0,0,0])
-        else:
-            if suggested_correction \
-              and suggested_correction[0] \
-              and suggested_correction[1]:
-                match(certainty):
-                    case hoop_detector.PredictionCertainty.CERTAIN:
-                        theta = 1
-                    case hoop_detector.PredictionCertainty.RELIABLE:
-                        theta = 0.4
-                    case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
-                        theta = 0.1
-                    case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
-                        theta = 0.05
-                    case hoop_detector.PredictionCertainty.NONE:
-                        theta = 0.01
-                    case default:
-                        print("???", certainty)
-                        theta = 0
-                avcor = smoothen_correction(avcor,
-                                            suggested_correction,
-                                            tickers['smoothing'].value, theta=theta)
-                #TODO: show these on CP instead of printing
-                drone_set_roll(avcor[0]*tickers['roll'].value)
-                drone_set_throttle(avcor[1]*tickers['throttle'].value)
-                prev_correct_cmd = True
-                lost_lock_frame_count = 0
-                #Determine if we're confident enough to fly through
-                #TODO: I think ideally the threshold should be a function of the distance to the hoop.
-                #NOTE: This doesn't take into account the corrections for pitch. That's okay for now.
-                csvwriter.writerow([time(),
-                                    suggested_correction[0],
-                                    suggested_correction[1],
-                                    avcor[0],
-                                    avcor[1],
-                                    tickers['smoothing']])
-                if avcor[0] < tickers["fwdthresh"].value \
-                  and avcor[1] < tickers["fwdthresh"].value:
-                    print("Okay, we're close enough... let's go forward!")
-                    drone_set_pitch(tickers["pitch"].value)
-                    # Reduce correction on vertical axis due to camera going down
-                    drone_set_throttle(avcor[1]
-                                       * tickers["throttle"].value
-                                       / (tickers["pitch_v_corr"].value+1))
-                else:
-                    drone_set_pitch(0)
-
-
+        if suggested_correction \
+          and suggested_correction[0] \
+          and suggested_correction[1]:
+            match(certainty):
+                case hoop_detector.PredictionCertainty.CERTAIN:
+                    theta = 1
+                case hoop_detector.PredictionCertainty.RELIABLE:
+                    theta = 0.4
+                case hoop_detector.PredictionCertainty.DIRECTION_ESTIMATE:
+                    theta = 0.2
+                case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
+                    theta = 0.1
+                case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
+                    theta = 0.05
+                case hoop_detector.PredictionCertainty.NONE:
+                    theta = 0.01
+                case default:
+                    print("???", certainty)
+                    theta = 0
+            avcor = smoothen_correction(avcor,
+                                        suggested_correction,
+                                        tickers['smoothing'].value, theta=theta)
+            #TODO: I'm not sure if applying the same smoothing here as with the correction is wise.
+            #       It might be too strong?
+            avdist = smoothen_distance(avdist,
+                                       estimated_distance,
+                                       tickers['smoothing'].value)
+        #TODO: currently, when testing with a recorded video, the avcor is TOTALLY wrong
+        #       I'm going to assume this will be automatically fixed when using the cam again, 
+        #       but... double check!
+        print(f"Avcor: {avcor[0]:.2f},{avcor[0]:.2f}; Avdist: {Float(avdist):.2h}m")
+        print(f"Hoop detection took {Float(time()-start):.2h}s")
+        #TODO: on the video one iteration takes 100ms. This is fine. But on the cam it might be faster.
+        #       We might want to slow down the "acting" on the commands a bit
+        control_drone(avcor, avdist)
 
 
 def process_stream():
