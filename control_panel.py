@@ -11,8 +11,6 @@ import numpy as np
 import pygame
 import pylwdrone
 import sys
-
-sys.sys.path.append("led_drawning")
 import pattern_to_draw as led
 
 # Initialize Pygame here, because otherwise you can't use fonts in libs... (stupid design imho..)
@@ -142,8 +140,8 @@ def process_stream():
                                   suggested_correction[1]*tickers['throttle'].value)
                             drone.set_throttle(suggested_correction[1]*tickers['throttle'].value*0.3)
                             prev_correct_cmd = True
-        if PRINT_LOOPTIME:
-            print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
+        # if PRINT_LOOPTIME:
+            # print(f"Elapsed time for full run: {Float(time() - start):.2h}s")
 
 def draw_thread_start():
     global draw_thread
@@ -252,6 +250,7 @@ while running:
                     print("Hoop flying: ", hoop_flying_enabled)
                     #TODO: shop with indicator on UI? Color changing button?
                 case pygame.K_p:
+                    print("Starting drawing")
                     draw_thread_start()
 
         elif event.type == pygame.KEYUP:
