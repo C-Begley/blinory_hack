@@ -8,6 +8,7 @@ import h264decoder  #Note: this one had to be installed manually!
                     #           - Note that for the second command,
                     #             it's best to drop the last arguments. (c.f.r README)
 import hoop_detector
+from hoop_detector import HOOP_COLOR
 import numpy as np
 import pygame
 import pylwdrone
@@ -57,6 +58,7 @@ class HoopFlyState(Enum):
     YOLO_FWD = 3,
 
 hoop_fly_state = HoopFlyState.NONE
+current_hoop_color = HOOP_COLOR.RED
 start_yolo_time = -1
 
 def parse_args():
@@ -263,8 +265,12 @@ def control_drone(corr, dist):
         if start_yolo_time == -1:
             start_yolo_time = time()
         elif (time() - start_yolo_time) > yolo_time:
-            hoop_fly_state = HoopFlyState.END   #TODO: eventually we need to do the color
-                                                #changes first
+            if current_hoop_color == HOOP_COLOR.BLUE:
+                hoop_fly_state = HoopFlyState.END
+            else:
+                current_hoop_color += 1
+                hoop_fly_state = HoopFlyState.LOCK
+
     elif hoop_fly_state == HoopFlyState.END:
         print("In HoopFlyState END")
         drone_land()
@@ -288,7 +294,7 @@ def hoop_flying():
             sleep(0.5)
             continue
         frame, suggested_correction, certainty, estimated_distance \
-                = hoop_detector.process_frame(frame)
+                = hoop_detector.process_frame(frame, current_hoop_color)
         with last_hoop_detector_frame_lock:
             last_hoop_detector_frame = frame
         if suggested_correction \
@@ -317,7 +323,6 @@ def hoop_flying():
             #       It might be too strong?
             print(f"estimated distance: {estimated_distance}")
             if estimated_distance > 0:
-                print("SMOOTHING: ", estimated_distance)
                 avdist = smoothen_distance(avdist,
                                            estimated_distance,
                                            tickers['smoothing'].value)
