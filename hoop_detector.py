@@ -11,35 +11,24 @@ from vidgear.gears import WriteGear #Used this one instead of OpenCV's write fun
                                     #Because the latter didn't work for me.
 from scipy.spatial.distance import cdist
 
-red_hsv_lower1 = np.array([0, 50, 75])     # V 200 works if no sun in lens. 75 is pretty extreme
-red_hsv_upper1 = np.array([30, 255, 255])
-red_hsv_lower2 = np.array([110, 50, 100])
-red_hsv_upper2 = np.array([160, 255, 255])
-# orange_hsv_lower = np.array([5, 160, 100])
-# orange_hsv_upper = np.array([50, 255, 255])
-blue_hsv_lower = np.array([100, 40, 30])
-blue_hsv_upper = np.array([125, 255, 150])
-
 #TODO: overlap check?
 #TODO: use function call instead, that allows us to add some kind of "tolerance factor" for all these numbers
-# List of Tuple(list[3], list[3]))
 color_ranges_red = []
-# orange_outside_shadow.png
-#color_ranges_red.append((np.array([174, 150, 82]),np.array([179, 255, 255])))
-#color_ranges_red.append((np.array([0, 195, 237]), np.array([4, 255, 252])))
-## orange_outside_shadow2.png
-#color_ranges_red.append((np.array([174, 166, 237]), np.array([179, 204, 255])))
-#color_ranges_red.append((np.array([0, 219, 241]), np.array([2, 255, 245])))
-## orange_outside_shadow_sun.png
-#color_ranges_red.append((np.array([164, 163, 180]), np.array([179, 186, 255])))
-#color_ranges_red.append((np.array([0, 225, 241]), np.array([5, 255, 249])))
-## orange_outside_shadow_sun2.png
-#color_ranges_red.append((np.array([0, 204, 235]), np.array([4, 255, 255])))
-#color_ranges_red.append((np.array([175, 156, 210]), np.array([179, 255, 243])))
+color_ranges_yellow = []
+color_ranges_blue = []
 # Event area
-color_ranges_red.append((np.array([0, 155, 210]), np.array([9, 205, 243])))
-color_ranges_red.append((np.array([178, 124, 196]), np.array([179, 194, 255])))
+# <- RED ->
+color_ranges_red.append((np.array([0, 150, 205]), np.array([9, 209, 247])))
+color_ranges_red.append((np.array([177, 120, 192]), np.array([180, 198, 255])))
+# <- YELLOW ->
+color_ranges_yellow.append((np.array([13, 190, 156]), np.array([31, 255, 235])))
+# <- BLUE ->
+color_ranges_blue.append((np.array([105, 231, 79]), np.array([118, 255, 150])))
 
+class HOOP_COLOR(Enum):
+    RED = 1
+    YELLOW = 2
+    BLUE = 3
 
 # TODO: --> args?
 MODE = "cam"
@@ -136,14 +125,17 @@ def calculate_rotation_angle(points):
 
     return angle_deg
 
-def mask_frame(frame):
-# mask = cv2.inRange(frame_hsv, red_hsv_lower, red_hsv_upper)
-    # mask = cv2.inRange(frame, blue_hsv_lower, blue_hsv_upper)
-    # mask1 = cv2.inRange(frame, red_hsv_lower1, red_hsv_upper1)   #TODO: make selectable
-    # mask2 = cv2.inRange(frame, red_hsv_lower2, red_hsv_upper2)   #TODO: make selectable
-    # mask = mask1 | mask2
+def mask_frame(frame, hoop_color):
+    ranges = None
+    match(hoop_color):
+        case HOOP_COLOR.RED:
+            ranges = color_ranges_red
+        case HOOP_COLOR.YELLOW:
+            ranges = color_ranges_yellow
+        case HOOP_COLOR.BLUE:
+            ranges = color_ranges_blue
     masks = []
-    for color_range in color_ranges_red:
+    for color_range in ranges:
         masks.append(cv2.inRange(frame, color_range[0], color_range[1]))
     mask = reduce(lambda x, y: x | y, masks)
 
@@ -240,7 +232,7 @@ def calculate_correction(cp):
     corr_y = -int( (cp[1] - frame_dimensions[1]/2) * 100 / (frame_dimensions[1]/2) )
     return (corr_x, corr_y)
 
-def process_frame(frame):
+def process_frame(frame, hoop_color):
     #TODO: the arrow drawing functions in this function can easily be refactored so we only
     #       need to call it once.
     w = None
@@ -258,7 +250,7 @@ def process_frame(frame):
     estimated_distance = -1 # -1 = invalid / unknown
 
     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask = mask_frame(frame_hsv)
+    mask = mask_frame(frame_hsv, hoop_color)
     # cv2.imshow("Mask", make_size_reasonable(mask))
     output_contours, rectlist, anglelist = contour_detection(mask, frame)
     if rectlist:
@@ -410,7 +402,7 @@ def main():
     if MODE == "image":
         frame = cv2.imread('sample_data/hoop_blue.jpg')
         frame_dimensions = frame.shape
-        output, suggested_correction, _ , _  = process_frame(frame)
+        output, suggested_correction, _ , _  = process_frame(frame, HOOP_COLOR.BLUE)
         cv2.imshow("Countours", make_size_reasonable(output))
         while True:
             k = cv2.waitKey(0)
@@ -428,7 +420,7 @@ def main():
             if not ret:
                 print("No more frames? Stream end?")
                 break
-            output, suggested_correction, _, _ = process_frame(frame)
+            output, suggested_correction, _, _ = process_frame(frame, HOOP_COLOR.BLUE)
             key = cv2.waitKey(1)
             if key == ord(' '):
                 while True:
@@ -468,7 +460,7 @@ def main():
                     frame = frame[:,:w,:]
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  #TODO: make more efficient
                                                                     # by not doing 2 conversions
-                    output, suggested_correction, _, _ = process_frame(frame)
+                    output, suggested_correction, _, _ = process_frame(frame, HOOP_COLOR.RED)
                     key = cv2.waitKey(1)
                     if key == ord(' '):
                         while True:
