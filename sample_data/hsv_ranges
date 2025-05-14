@@ -1,5 +1,6 @@
 Color ranges found by manually testing images in HsvRangeTool.
 
+<--- RED --->
 orange_outside_shadow.png
 Upper HSV:  (179, 255, 255)
 Lower HSV:  (174, 150, 82)
@@ -44,3 +45,14 @@ Lower HSV:  (0, 155, 210)
 +
 Upper HSV:  (179, 194, 255)
 Lower HSV:  (178, 124, 196)
+
+<--- YELLOW --->
+Event Hall
+Upper HSV:  (31, 255, 235)
+Lower HSV:  (13, 190, 156)
+
+
+<--- BLUE --->
+Upper HSV:  (118, 255, 150)
+Lower HSV:  (105, 231, 79)
+
