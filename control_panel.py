@@ -197,6 +197,8 @@ def smoothen_distance(avdist, estdist, factor):
     assert 0 <= factor
     alpha = 1/(factor+1)    # The higher the factor, the smaller alpha
     avdist = alpha * estdist + (1 - alpha) * avdist
+    if avdist < 0:
+        drone_land()
     return avdist
 
 def control_drone(corr, dist):
