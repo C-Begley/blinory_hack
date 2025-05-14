@@ -313,9 +313,12 @@ def hoop_flying():
                                         tickers['smoothing'].value, theta=theta)
             #TODO: I'm not sure if applying the same smoothing here as with the correction is wise.
             #       It might be too strong?
-            avdist = smoothen_distance(avdist,
-                                       estimated_distance,
-                                       tickers['smoothing'].value)
+            print(f"estimated distance: {estimated_distance}")
+            if estimated_distance > 0:
+                print("SMOOTHING: ", estimated_distance)
+                avdist = smoothen_distance(avdist,
+                                           estimated_distance,
+                                           tickers['smoothing'].value)
         #TODO: currently, when testing with a recorded video, the avcor is TOTALLY wrong
         #       I'm going to assume this will be automatically fixed when using the cam again, 
         #       but... double check!
