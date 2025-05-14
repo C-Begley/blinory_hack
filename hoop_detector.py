@@ -29,6 +29,7 @@ class HOOP_COLOR(Enum):
     RED = 1
     YELLOW = 2
     BLUE = 3
+    NONE = 4
 
 # TODO: --> args?
 MODE = "cam"
