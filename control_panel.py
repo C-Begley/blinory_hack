@@ -372,6 +372,7 @@ def process_events():
     # Event handling
     global running
     global hoop_flying_enabled
+    global hoop_fly_state
     current_slider = None
     clock = pygame.time.Clock()
     while running:
@@ -442,6 +443,7 @@ def process_events():
                         drone_land()
                     case pygame.K_h:
                         hoop_flying_enabled = not hoop_flying_enabled
+                        hoop_fly_state = HoopFlyState.NONE
                         print("Hoop flying: ", hoop_flying_enabled)
                         #TODO: shop with indicator on UI? Color changing button?
             elif event.type == pygame.KEYUP:
