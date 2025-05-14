@@ -130,19 +130,19 @@ sliders = [
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         # Hoop fly aggressiveness
-        "roll":         Ticker(220, 100, -10, 10, 1.0, label_text="×Roll:", step=0.1),
-        "throttle":     Ticker(420, 100, -10, 10, 1.0, label_text="×Throttle:", step=0.1),
-        "pitch":        Ticker(620, 100, 0, 100, 10, label_text="vPitch:", step=0.1),
+        "roll":         Ticker(220, 100, -10, 10, 0.9, label_text="×Roll:", step=0.1),
+        "throttle":     Ticker(420, 100, -10, 10, 0.7, label_text="×Throttle:", step=0.1),
+        "pitch":        Ticker(620, 100, 0, 100, 20, label_text="vPitch:", step=5),
         # Threshold before moving forward
         #TODO: calibrate
-        "fwdthresh":    Ticker(220, 150, 0, 100, 30, label_text="ΔThr", step=5),
+        "fwdthresh":    Ticker(220, 150, 0, 100, 10, label_text="ΔThr", step=5),
         # Correct camera movement when pitching forward
         #TODO: calibrate
         "pitch_v_corr": Ticker(370, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
         # Distance before YOLO state
-        "thr_yolo": Ticker(570, 150, 0, 10, 3, label_text="ThrYolo", step=0.5),
+        "thr_yolo": Ticker(570, 150, 0, 10, 1.5, label_text="ThrYolo", step=0.5),
         # Yolo forward speed
-        "vPitch_yolo": Ticker(770, 150, 0, 50, 10, label_text="vPitchYolo", step=1),
+        "vPitch_yolo": Ticker(770, 150, 0, 100, 50, label_text="vPitchYolo", step=5),
 
         # Manual flying speeds
         "manual_roll_speed":        Ticker(50, 600, 20, 100, 50, label_text="MvRoll", step=10),
@@ -151,12 +151,12 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 50, 15, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 10, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
-        "cRoll":        Ticker(50, 700, -100, 100, 0, label_text="cRoll", step=5),
+        "cRoll":        Ticker(50, 700, -100, 100, 20, label_text="cRoll", step=5),
         "cPitch":       Ticker(250, 700, -100, 100, 0, label_text="cPitch", step=5),
-        "cYaw":         Ticker(450, 700, -100, 100, 0, label_text="cYaw", step=5),
+        "cYaw":         Ticker(450, 700, -100, 100, 3, label_text="cYaw", step=1),
         "cThrottle":    Ticker(650, 700, -100, 100, 0, label_text="cThrottle", step=5),
 }
 
