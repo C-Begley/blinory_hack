@@ -236,19 +236,19 @@ def control_drone(corr, dist):
     yolo_time = 1000    #1000ms #TODO: make ticker?
 
     if hoop_fly_state == HoopFlyState.NONE:
-        print("In HoopFlyState NONE")
+        print(f"In HoopFlyState NONE ({current_hoop_color})")
         if corr is not None:
             hoop_fly_state = HoopFlyState.LOCK
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
-        print("In HoopFlyState LOCK")
+        print(f"In HoopFlyState LOCK ({current_hoop_color})")
         #TODO: show these on CP instead of printing
         drone_set_roll(corr[0]*tickers['roll'].value)
         drone_set_throttle(corr[1]*tickers['throttle'].value)
         if max(abs(corr[0]), abs(corr[1])) < tickers['fwdthresh'].value:
             hoop_fly_state = HoopFlyState.LOCK_FWD
     elif hoop_fly_state == HoopFlyState.LOCK_FWD:
-        print("In HoopFlyState LOCK_FWD")
+        print(f"In HoopFlyState LOCK_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["pitch"].value)
         drone_set_roll(corr[0]*tickers['roll'].value)
         drone_set_throttle(corr[1]
@@ -258,7 +258,7 @@ def control_drone(corr, dist):
                 and dist < tickers['thr_yolo'].value:
             hoop_fly_state = HoopFlyState.YOLO_FWD
     elif hoop_fly_state == HoopFlyState.YOLO_FWD:
-        print("In HoopFlyState YOLO_FWD")
+        print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["vPitch_yolo"].value)
         drone_set_roll(0)
         drone_set_throttle(0)
