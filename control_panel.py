@@ -230,6 +230,8 @@ def control_drone(corr, dist):
 
     global hoop_fly_state
     global start_yolo_time
+    global hoop_flying_enabled
+    global current_hoop_color
 
     yolo_time = 1000    #1000ms #TODO: make ticker?
 
@@ -243,7 +245,7 @@ def control_drone(corr, dist):
         #TODO: show these on CP instead of printing
         drone_set_roll(corr[0]*tickers['roll'].value)
         drone_set_throttle(corr[1]*tickers['throttle'].value)
-        if max(corr[0], corr[1]) < tickers['fwdthresh'].value:
+        if max(abs(corr[0]), abs(corr[1])) < tickers['fwdthresh'].value:
             hoop_fly_state = HoopFlyState.LOCK_FWD
     elif hoop_fly_state == HoopFlyState.LOCK_FWD:
         print("In HoopFlyState LOCK_FWD")
@@ -252,9 +254,7 @@ def control_drone(corr, dist):
         drone_set_throttle(corr[1]
                             * tickers['throttle'].value
                             * (tickers["pitch_v_corr"].value+1))
-        if max(corr[0], corr[1]) < tickers['fwdthresh'].value:
-            hoop_fly_state = HoopFlyState.LOCK_FWD
-        if max(corr[0], corr[1]) < tickers['fwdthresh'].value \
+        if max(abs(corr[0]), abs(corr[1])) < tickers['fwdthresh'].value \
                 and dist < tickers['thr_yolo'].value:
             hoop_fly_state = HoopFlyState.YOLO_FWD
     elif hoop_fly_state == HoopFlyState.YOLO_FWD:
@@ -264,11 +264,24 @@ def control_drone(corr, dist):
         drone_set_throttle(0)
         if start_yolo_time == -1:
             start_yolo_time = time()
-        elif (time() - start_yolo_time) > yolo_time:
+        elif (time() - start_yolo_time) < yolo_time:
+            print(f"{time()-start_yolo_time}/{yolo_time}")
+            drone_set_pitch(tickers["vPitch_yolo"].value)
+        else:
+            print("DONE YOLO")
+            drone_set_pitch(0)
             if current_hoop_color == HOOP_COLOR.BLUE:
                 hoop_fly_state = HoopFlyState.END
             else:
-                current_hoop_color += 1
+                if current_hoop_color == HOOP_COLOR.RED:
+                    current_hoop_color = HOOP_COLOR.YELLOW
+                elif current_hoop_color == HOOP_COLOR.YELLOW:
+                    current_hoop_color = HOOP_COLOR.BLUE
+                else:
+                    print("This shouldn't happen... Stopping...")
+                    current_hoop_color = HOOP_COLOR.NONE
+                    hoop_flying_enabled = False
+                    drone_land()
                 hoop_fly_state = HoopFlyState.LOCK
 
     elif hoop_fly_state == HoopFlyState.END:
