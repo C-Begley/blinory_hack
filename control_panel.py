@@ -301,6 +301,14 @@ def process_stream():
             print(e)
             sleep(1)
 
+def draw_thread_start():
+    global draw_thread
+    if(draw_thread != None and draw_thread.is_alive()):
+        print("Thread already running")
+    else:
+        draw_thread = Thread(target=led.draw_from_thread, args=[drone])
+        draw_thread.start()
+
 def process_events():
     #TODO: I'm more of a fan of doing the event handling INSIDE of the UI element classes.
     #       E.g. have an "on_click()" method that calls the action.
@@ -379,6 +387,10 @@ def process_events():
                         hoop_flying_enabled = not hoop_flying_enabled
                         print("Hoop flying: ", hoop_flying_enabled)
                         #TODO: shop with indicator on UI? Color changing button?
+                    case pygame.K_p:
+                        print("Starting drawing")
+                        draw_thread_start()
+
             elif event.type == pygame.KEYUP:
                 match event.key:
                     case pygame.K_r:
@@ -398,14 +410,6 @@ def process_events():
                     case pygame.K_e:
                         drone_set_yaw(0)
         clock.tick(60)
-def draw_thread_start():
-    global draw_thread
-    if(draw_thread != None and draw_thread.is_alive()):
-        print("Thread already running")
-    else:
-        draw_thread = Thread(target=led.draw_from_thread, args=[drone])
-        draw_thread.start()
-
 args = parse_args()
 
 

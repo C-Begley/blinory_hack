@@ -8,6 +8,7 @@ class Direction(e.Enum):
     DOWN = 2
     LEFT = 3
     RIGHT = 4
+    YAW= 5
 
 class led_drawer():
 
@@ -23,6 +24,8 @@ class led_drawer():
             self.drone.set_roll(speed)
         elif direction==Direction.LEFT:
             self.drone.set_roll(-speed)
+        elif direction==Direction.YAW:
+            self.drone.set_yaw(speed)
         else:
             print("Direction {} not recognised".format(direction))
 
@@ -31,12 +34,23 @@ class led_drawer():
         self.__move(direction, speed)
         t.sleep(dur)
         self.__move(direction, speed=0)
-        t.sleep(dur*2)
+        t.sleep(0.5)
         print("Done moving {} with speed {}", direction, speed)
         
-    def move_and_bank(direction, bank, dur=1,speed=25, roll=45):
+    def move_and_bank(self, direction, move_dur, bank, bank_dur,speed=25, roll=25):
         self.__move(direction, speed)
         self.__move(bank,roll)
-        t.sleep(dur)
-        self.__move(direction, 0)
-        self.__move(bank,0)
+        if(move_dur > bank_dur):
+            t.sleep(bank_dur)
+            self.__move(bank,0)
+            t.sleep(move_dur-bank_dur)
+            self.__move(direction,0)
+        if(move_dur < bank_dur):
+            t.sleep(move_dur)
+            self.__move(direction,0)
+            t.sleep(bank_dur-move_dur)
+            self.__move(bank,0)
+        else:
+            t.sleep(move_dur)
+            self.__move(direction, 0)
+            self.__move(bank,0)
