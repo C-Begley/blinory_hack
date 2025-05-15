@@ -137,7 +137,7 @@ tickers = {
         "pitch":        Ticker(620, 100, 0, 100, 20, label_text="vPitch:", step=5),
         # Threshold before moving forward
         #TODO: calibrate
-        "fwdthresh":    Ticker(220, 150, 0, 100, 10, label_text="ΔThr", step=5),
+        "fwdthresh":    Ticker(220, 150, 0, 100, 7, label_text="ΔThr", step=2),
         # Correct camera movement when pitching forward
         #TODO: calibrate
         "pitch_v_corr": Ticker(370, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
