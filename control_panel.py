@@ -56,10 +56,13 @@ class HoopFlyState(Enum):
     LOCK = 1,
     LOCK_FWD = 2,
     YOLO_FWD = 3,
+    BRAKE = 4,
+    END = 5
 
 hoop_fly_state = HoopFlyState.NONE
 current_hoop_color = HOOP_COLOR.RED
 start_yolo_time = -1
+start_brake_time = -1
 
 def parse_args():
     parser = ArgumentParser(
@@ -253,9 +256,13 @@ def control_drone(corr_x, corr_y, dist):
         drone_set_roll(corr_x*tickers['roll'].value)
         drone_set_throttle(corr_y
                             * tickers['throttle'].value
-                            * (tickers["pitch_v_corr"].value+1))
-        if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
-                and dist < tickers['thr_yolo'].value:
+                            + (tickers["pitch_v_corr"].value)
+        if max(abs(corr_x), abs(corr_y)) > tickers['fwdthresh'].value * 0.8 \
+                and dist > tickers['thr_yolo'].value * 1.5:
+            hoop_fly_state = HoopFlyState.LOCK
+            drone_set_pitch(0)
+        elif dist < tickers['thr_yolo'].value:
+            # switch over anyways, because we might have flown through already...
             hoop_fly_state = HoopFlyState.YOLO_FWD
             if current_hoop_color == HOOP_COLOR.BLUE:
                 # hoop_fly_state = HoopFlyState.END
@@ -291,6 +298,15 @@ def control_drone(corr_x, corr_y, dist):
             start_yolo_time = -1
             if current_hoop_color == HOOP_COLOR.BLUE:
                 hoop_fly_state.END
+            hoop_fly_state = HoopFlyState.BRAKE
+            start_brake_time = time()
+
+    elif hoop_fly_state == HoopFlyState.BRAKE:
+        print(f"In HoopFlyState BRAKE ({current_hoop_color})")
+        drone_set_pitch(-5)
+        drone_set_throttle(20)
+        # drone_set_throttle(0)
+        if time() - start_brake_time > brake_seconds:
             hoop_fly_state = HoopFlyState.LOCK
 
     elif hoop_fly_state == HoopFlyState.END:
@@ -308,6 +324,8 @@ def hoop_flying():
     while running:
         start = time()
         if not hoop_flying_enabled:
+            avcor = (0,0)
+            avdist = 10
             sleep(0.2)
             continue
         with last_frame_lock:
