@@ -203,7 +203,7 @@ def smoothen_distance(avdist, estdist, factor):
         drone_land()
     return avdist
 
-def control_drone(corr, dist):
+def control_drone(corr_x, corr_y, dist):
     '''
         FSM:
             * NONE:
@@ -233,45 +233,34 @@ def control_drone(corr, dist):
     global hoop_flying_enabled
     global current_hoop_color
 
-    yolo_time = 1000    #1000ms #TODO: make ticker?
+    yolo_time = 1.25    #1s #TODO: make ticker?
 
     if hoop_fly_state == HoopFlyState.NONE:
         print(f"In HoopFlyState NONE ({current_hoop_color})")
-        if corr is not None:
+        if corr_x is not None and corr_y is not None:
             hoop_fly_state = HoopFlyState.LOCK
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
         print(f"In HoopFlyState LOCK ({current_hoop_color})")
         #TODO: show these on CP instead of printing
-        drone_set_roll(corr[0]*tickers['roll'].value)
-        drone_set_throttle(corr[1]*tickers['throttle'].value)
-        if max(abs(corr[0]), abs(corr[1])) < tickers['fwdthresh'].value:
+        drone_set_roll(corr_x*tickers['roll'].value)
+        drone_set_throttle(corr_y*tickers['throttle'].value)
+        if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value:
             hoop_fly_state = HoopFlyState.LOCK_FWD
     elif hoop_fly_state == HoopFlyState.LOCK_FWD:
         print(f"In HoopFlyState LOCK_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["pitch"].value)
-        drone_set_roll(corr[0]*tickers['roll'].value)
-        drone_set_throttle(corr[1]
+        drone_set_roll(corr_x*tickers['roll'].value)
+        drone_set_throttle(corr_y
                             * tickers['throttle'].value
                             * (tickers["pitch_v_corr"].value+1))
-        if max(abs(corr[0]), abs(corr[1])) < tickers['fwdthresh'].value \
+        if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
                 and dist < tickers['thr_yolo'].value:
             hoop_fly_state = HoopFlyState.YOLO_FWD
-    elif hoop_fly_state == HoopFlyState.YOLO_FWD:
-        print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
-        drone_set_pitch(tickers["vPitch_yolo"].value)
-        drone_set_roll(0)
-        drone_set_throttle(0)
-        if start_yolo_time == -1:
-            start_yolo_time = time()
-        elif (time() - start_yolo_time) < yolo_time:
-            print(f"{time()-start_yolo_time}/{yolo_time}")
-            drone_set_pitch(tickers["vPitch_yolo"].value)
-        else:
-            print("DONE YOLO")
-            drone_set_pitch(0)
             if current_hoop_color == HOOP_COLOR.BLUE:
-                hoop_fly_state = HoopFlyState.END
+                # hoop_fly_state = HoopFlyState.END
+                print("Blue fwd? Shouldn't happen? I think?")
+                pass    #ignore I think? Will not happen? Or will it?
             else:
                 if current_hoop_color == HOOP_COLOR.RED:
                     current_hoop_color = HOOP_COLOR.YELLOW
@@ -282,7 +271,27 @@ def control_drone(corr, dist):
                     current_hoop_color = HOOP_COLOR.NONE
                     hoop_flying_enabled = False
                     drone_land()
-                hoop_fly_state = HoopFlyState.LOCK
+        # else:
+            # print("B", max(abs(corr[0]), abs(corr[1])), corr[0], corr[1], abs(corr[0]), abs(corr[1]), tickers['fwdthresh'].value)
+    elif hoop_fly_state == HoopFlyState.YOLO_FWD:
+        print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
+        drone_set_pitch(tickers["vPitch_yolo"].value)
+        # drone_set_roll(0)
+        # drone_set_throttle(0)
+        if start_yolo_time == -1:
+            print(f"SETTING START_YOLO_TIME TO {time()}")
+            start_yolo_time = time()
+        elif (time() - start_yolo_time) < yolo_time:
+            print(f"{time()-start_yolo_time}/{yolo_time} ({time()} - {start_yolo_time})")
+            drone_set_pitch(tickers["vPitch_yolo"].value)
+        else:
+            print("DONE YOLO")
+            drone_set_pitch(0)
+            print(f"SETTING START_YOLO_TIME TO {-1}")
+            start_yolo_time = -1
+            if current_hoop_color == HOOP_COLOR.BLUE:
+                hoop_fly_state.END
+            hoop_fly_state = HoopFlyState.LOCK
 
     elif hoop_fly_state == HoopFlyState.END:
         print("In HoopFlyState END")
@@ -334,7 +343,7 @@ def hoop_flying():
                                         tickers['smoothing'].value, theta=theta)
             #TODO: I'm not sure if applying the same smoothing here as with the correction is wise.
             #       It might be too strong?
-            print(f"estimated distance: {estimated_distance}")
+            # print(f"estimated distance: {estimated_distance}")
             if estimated_distance > 0:
                 avdist = smoothen_distance(avdist,
                                            estimated_distance,
@@ -342,14 +351,15 @@ def hoop_flying():
         #TODO: currently, when testing with a recorded video, the avcor is TOTALLY wrong
         #       I'm going to assume this will be automatically fixed when using the cam again, 
         #       but... double check!
-        print(f"Avcor: {avcor[0]:.2f},{avcor[0]:.2f}; Avdist: {Float(avdist):.2h}m")
-        print(f"Hoop detection took {Float(time()-start):.2h}s")
+        print(f"Avcor: {avcor[0]:.2f},{avcor[1]:.2f}; Avdist: {Float(avdist):.2h}m")
+        # print(f"Hoop detection took {Float(time()-start):.2h}s")
         #TODO: on the video one iteration takes 100ms. This is fine. But on the cam it might be faster.
         #       We might want to slow down the "acting" on the commands a bit
-        control_drone(avcor, avdist)
+        control_drone(avcor[0], avcor[1], avdist)
 
 
 def process_stream():
+    sleep(3)    # Wait a little longer befor actually hooking on to the stream...
     drone_stream = pylwdrone.LWDrone()
     #TODO: heartbeat?
     #TODO: error catching for when drone was not on
@@ -462,6 +472,7 @@ def process_events():
                     case pygame.K_h:
                         hoop_flying_enabled = not hoop_flying_enabled
                         hoop_fly_state = HoopFlyState.NONE
+                        current_hoop_color = HOOP_COLOR.RED
                         print("Hoop flying: ", hoop_flying_enabled)
                         #TODO: shop with indicator on UI? Color changing button?
             elif event.type == pygame.KEYUP:
