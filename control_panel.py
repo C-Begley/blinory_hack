@@ -143,7 +143,7 @@ tickers = {
         "fwdthresh":    Ticker(220, 150, 0, 100, 7, label_text="ΔThr", step=2),
         # Correct camera movement when pitching forward
         #TODO: calibrate
-        "pitch_v_corr": Ticker(370, 150, 0, 10, 0, label_text="↕Pitch", step=0.5),
+        "pitch_v_corr": Ticker(370, 150, -50, +50, 0, label_text="↕Pitch", step=2),
         # Distance before YOLO state
         "thr_yolo": Ticker(570, 150, 0, 10, 1.5, label_text="ThrYolo", step=0.5),
         # Yolo forward speed
