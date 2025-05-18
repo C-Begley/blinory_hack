@@ -49,6 +49,8 @@ last_frame_lock = Lock()
 last_hoop_detector_frame = None
 last_hoop_detector_frame_lock = Lock()
 
+avcor = (0,0)
+avdist = 10
 executing_command = False
 time_last_command_sent = 0
 stabilizing = False
@@ -244,6 +246,8 @@ def control_drone(corr_x, corr_y, dist):
     global start_yolo_time
     global hoop_flying_enabled
     global current_hoop_color
+    global avcor
+    global avdist
 
     global start_brake_time
     global executing_command
@@ -304,13 +308,13 @@ def control_drone(corr_x, corr_y, dist):
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
         print(f"In HoopFlyState LOCK ({current_hoop_color})")
-        # drone_set_roll(corr_x*tickers['roll'].value)
-        # drone_set_throttle(corr_y*tickers['throttle'].value)
         # Require twice the accuracy for YOLO
         if max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2) \
             and dist < tickers['thr_yolo'].value:
             # switch over anyways, because we might have flown through already...
             hoop_fly_state = HoopFlyState.YOLO_FWD
+            avcor = (0,0)
+            avdist = 0
             if current_hoop_color == HOOP_COLOR.BLUE:
                 # hoop_fly_state = HoopFlyState.END
                 print("Blue fwd? Shouldn't happen? I think?")
@@ -375,7 +379,7 @@ def control_drone(corr_x, corr_y, dist):
             print(f"SETTING START_YOLO_TIME TO {time()}")
             start_yolo_time = time()
         elif (time() - start_yolo_time) < yolo_time:
-            print(f"{time()-start_yolo_time}/{yolo_time} ({time()} - {start_yolo_time})")
+            # print(f"{time()-start_yolo_time}/{yolo_time} ({time()} - {start_yolo_time})")
             drone_set_pitch(tickers["vPitch_yolo"].value)
         else:
             print("DONE YOLO")
@@ -405,6 +409,9 @@ def hoop_flying():
     global last_frame_lock
     global last_hoop_detector_frame_lock
     global last_hoop_detector_frame
+    global avcor
+    global avdist
+
     avcor = (0,0)   #Moving average for corrections
     avdist = 10
     while running:
@@ -507,6 +514,9 @@ def process_events():
     global running
     global hoop_flying_enabled
     global hoop_fly_state
+    global avcor
+    global avdist
+
     current_slider = None
     clock = pygame.time.Clock()
     while running:
@@ -579,6 +589,11 @@ def process_events():
                         hoop_flying_enabled = not hoop_flying_enabled
                         hoop_fly_state = HoopFlyState.NONE
                         current_hoop_color = HOOP_COLOR.RED
+                        drone_set_throttle(0)
+                        drone_set_roll(0)
+                        drone_set_pitch(0)
+                        avcor = (0,0)
+                        avdist = 0
                         print("Hoop flying: ", hoop_flying_enabled)
                         #TODO: shop with indicator on UI? Color changing button?
             elif event.type == pygame.KEYUP:
