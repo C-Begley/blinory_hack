@@ -389,6 +389,8 @@ def process_frame(frame, hoop_color):
     else:
         suggested_correction = None
 
+    cv2.circle(output_contours, (int(frame_dimensions[0]/2), int(frame_dimensions[1]/2)), 1, (255,255,255), 3)
+
     return output_contours, suggested_correction, certainty, estimated_distance
 
 # TODO: I'm not a big fan of this. Need a more reliable way of doing things.
