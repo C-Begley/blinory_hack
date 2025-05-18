@@ -56,6 +56,12 @@ time_last_command_sent = 0
 stabilizing = False
 time_started_stabilizing = 0
 
+# These will track if we're making progress or not, and if not, give the controls a boost
+last_corr_x = 0
+last_corr_y = 0
+corr_boost_x = 0
+corr_boost_y = 0
+
 running = True
 
 class HoopFlyState(Enum):
@@ -255,11 +261,16 @@ def control_drone(corr_x, corr_y, dist):
     global stabilizing
     global time_started_stabilizing
 
+    global last_corr_x
+    global last_corr_y
+    global corr_boost_x
+    global corr_boost_y
+
     brake_seconds = 0.25
 
     yolo_time = 1.25    #1s #TODO: make ticker?
 
-    offset_x = 14
+    offset_x = 10 * tickers['roll'].value
     #TODO: replace multip w ticker
     if abs(corr_x) > 35 and dist > 4:
         mult_x = 30 + offset_x
@@ -270,9 +281,9 @@ def control_drone(corr_x, corr_y, dist):
     elif abs(corr_x) > 5:
         mult_x = 9 + offset_x
     else:   #Very tiny differences
-        mult_x = 5 + offset_x
+        mult_x = 7 + offset_x
 
-    offset_y = 8
+    offset_y = 8 * tickers['throttle'].value
     if abs(corr_y) > 35 and dist > 4:
         mult_y = 20 + offset_y
     elif abs(corr_y) > 25 and dist > 3:
@@ -282,10 +293,10 @@ def control_drone(corr_x, corr_y, dist):
     elif abs(corr_y) > 5:
         mult_y = 13 + offset_y
     else:   #Very tiny differences
-        mult_y = 10 + offset_y
+        mult_y = 12 + offset_y
     x_dir = sign(corr_x) * mult_x
     y_dir = sign(corr_y) * mult_y
-    step_time = 0.5
+    step_time = 0.4
     stabilize_time = 0.50
 
 
@@ -300,6 +311,23 @@ def control_drone(corr_x, corr_y, dist):
     elif stabilizing:   # Don't process state, we're still stabilizing
         if time() - time_started_stabilizing > stabilize_time:
             stabilizing = False
+            # Check if we're actually making progress...
+            if sign(corr_x) == sign(last_corr_x):
+                if abs(corr_x) >= abs(last_corr_x):
+                    corr_boost_x += 0.5
+                else:
+                    corr_boost_x -= 0.3
+            else:
+                corr_boost_x -= 0.5
+            if sign(corr_y) == sign(last_corr_y):
+                if abs(corr_y) >= abs(last_corr_y):
+                    corr_boost_y += 0.5
+                else:
+                    corr_boost_y -= 0.3
+            else:
+                corr_boost_y -= 0.5
+            last_corr_x = corr_x
+            last_corr_y = corr_y
 
     elif hoop_fly_state == HoopFlyState.NONE:
         print(f"In HoopFlyState NONE ({current_hoop_color})")
@@ -329,9 +357,9 @@ def control_drone(corr_x, corr_y, dist):
                     current_hoop_color = HOOP_COLOR.NONE
                     hoop_flying_enabled = False
                     drone_land()
-        drone_set_roll(x_dir*tickers['roll'].value)
-        drone_set_throttle(y_dir*tickers['throttle'].value)
-        print(f"X/Y: {x_dir:.1f}/{y_dir:.1f} avgcorr: {corr_x:.1f}/{corr_y:.1f} d: {dist}")
+        drone_set_roll(x_dir + (corr_boost_x*sign(x_dir)))
+        drone_set_throttle(y_dir + (corr_boost_y*sign(y_dir)))
+        print(f"X/Y: {x_dir:.1f}/{y_dir:.1f} avgcorr: {corr_x:.1f}/{corr_y:.1f} d: {dist} B: {corr_boost_x:.1f},{corr_boost_y:.1f}")
         if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
           and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value:    #Don't move at yolo dist. Just balance
             drone_set_pitch(tickers['pitch'].value)
