@@ -141,17 +141,17 @@ sliders = [
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         # Hoop fly aggressiveness
-        "roll":         Ticker(220, 100, -10, 10, 0.9, label_text="×Roll:", step=0.1),
-        "throttle":     Ticker(420, 100, -10, 10, 0.7, label_text="×Throttle:", step=0.1),
-        "pitch":        Ticker(620, 100, 0, 100, 20, label_text="vPitch:", step=5),
+        "roll":         Ticker(220, 100, -10, 10, 1.0, label_text="×Roll:", step=0.1),
+        "throttle":     Ticker(420, 100, -10, 10, 1.0, label_text="×Throttle:", step=0.1),
+        "pitch":        Ticker(620, 100, 0, 100, 30, label_text="vPitch:", step=2),
         # Threshold before moving forward
         #TODO: calibrate
-        "fwdthresh":    Ticker(220, 150, 0, 100, 7, label_text="ΔThr", step=2),
+        "fwdthresh":    Ticker(220, 150, 0, 100, 15, label_text="ΔThr", step=2),
         # Correct camera movement when pitching forward
         #TODO: calibrate
         "pitch_v_corr": Ticker(370, 150, -50, +50, 0, label_text="↕Pitch", step=2),
         # Distance before YOLO state
-        "thr_yolo": Ticker(570, 150, 0, 10, 1.5, label_text="ThrYolo", step=0.5),
+        "thr_yolo": Ticker(570, 150, 0, 10, 2.2, label_text="ThrYolo", step=0.25),
         # Yolo forward speed
         "vPitch_yolo": Ticker(770, 150, 0, 100, 50, label_text="vPitchYolo", step=5),
 
@@ -162,11 +162,11 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 50, 10, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 5, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
-        "cRoll":        Ticker(50, 700, -100, 100, 20, label_text="cRoll", step=5),
-        "cPitch":       Ticker(250, 700, -100, 100, 0, label_text="cPitch", step=5),
+        "cRoll":        Ticker(50, 700, -100, 100, 5, label_text="cRoll", step=5),
+        "cPitch":       Ticker(250, 700, -100, 100, 15, label_text="cPitch", step=5),
         "cYaw":         Ticker(450, 700, -100, 100, 3, label_text="cYaw", step=1),
         "cThrottle":    Ticker(650, 700, -100, 100, 0, label_text="cThrottle", step=5),
 }
@@ -430,21 +430,22 @@ def hoop_flying():
                 case hoop_detector.PredictionCertainty.CERTAIN:
                     theta = 1
                 case hoop_detector.PredictionCertainty.RELIABLE:
-                    theta = 0.4
+                    theta = 0.3
                 case hoop_detector.PredictionCertainty.DIRECTION_ESTIMATE:
                     theta = 0.2
                 case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
-                    theta = 0.1
-                case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
                     theta = 0.05
-                case hoop_detector.PredictionCertainty.NONE:
+                case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
                     theta = 0.01
+                case hoop_detector.PredictionCertainty.NONE:
+                    theta = 0.00
                 case default:
                     print("???", certainty)
                     theta = 0
             avcor = smoothen_correction(avcor,
                                         suggested_correction,
                                         tickers['smoothing'].value, theta=theta)
+
             #TODO: I'm not sure if applying the same smoothing here as with the correction is wise.
             #       It might be too strong?
             # print(f"estimated distance: {estimated_distance}")
