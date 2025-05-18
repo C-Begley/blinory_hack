@@ -23,6 +23,8 @@ def auto_connect():
         if ap_name in device.connection:
             print(f"This is the drone. Nothing more to be done.")
             return 0
+        else:
+            nmcli.device.disconnect(iface)
 
     print("Trying to connect to the drone. Make sure it's on.")
     for i in range(n_attempts):
