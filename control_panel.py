@@ -433,9 +433,21 @@ def control_drone(corr_x, corr_y, dist, certainty):
                     drone_land()
     elif hoop_fly_state == HoopFlyState.YOLO_FWD:
         print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
+        keys_pressed = pygame.key.get_pressed()
+        cheat_w_x = 10
+        cheat_w_y = 10
+        if keys_pressed[pygame.K_a]:
+            cheat_roll = -cheat_w_x
+        elif keys_pressed[pygame.K_d]:
+            cheat_roll = cheat_w_x
+        if keys_pressed[pygame.K_a]:
+            cheat_throttle = -cheat_w_y
+        elif keys_pressed[pygame.K_f]:
+            cheat_throttle = cheat_w_y
+
         drone_set_pitch(tickers["vPitch_yolo"].value)
-        drone_set_roll(offset_boost_x/2)
-        drone_set_throttle(offset_boost_y*1.2)
+        drone_set_roll(offset_boost_x/2 + cheat_roll)
+        drone_set_throttle(offset_boost_y*1.2 + cheat_throttle)
         pitching = True
         if start_yolo_time == -1:
             print(f"SETTING START_YOLO_TIME TO {time()}")
