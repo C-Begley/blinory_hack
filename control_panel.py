@@ -20,6 +20,7 @@ pygame.init()
 from argparse import ArgumentParser
 from auto_connect import auto_connect
 from blinory import Drone
+from math import copysign
 from prefixed import Float
 from threading import Thread, Lock
 from time import sleep, time
@@ -48,6 +49,10 @@ last_frame_lock = Lock()
 last_hoop_detector_frame = None
 last_hoop_detector_frame_lock = Lock()
 
+executing_command = False
+time_last_command_sent = 0
+stabilizing = False
+time_started_stabilizing = 0
 
 running = True
 
@@ -57,7 +62,8 @@ class HoopFlyState(Enum):
     LOCK_FWD = 2,
     YOLO_FWD = 3,
     BRAKE = 4,
-    END = 5
+    COMMAND_WAIT = 5,
+    END = 6
 
 hoop_fly_state = HoopFlyState.NONE
 current_hoop_color = HOOP_COLOR.RED
@@ -206,6 +212,9 @@ def smoothen_distance(avdist, estdist, factor):
         drone_land()
     return avdist
 
+def sign(val):
+    return copysign(1, val)
+
 def control_drone(corr_x, corr_y, dist):
     '''
         FSM:
@@ -220,6 +229,7 @@ def control_drone(corr_x, corr_y, dist):
                 - Stay locked, but slowly pitch forward.
                 - Slightly adjust the correction for camera being brought down
                 - (distance < dist_thr) && (corr < corr_fwd_thresh)? --> YOLO_FWD
+                - (distance > dist_thr*1.5) && (corr < corr_fwd_thresh)? --> LOCK
             * YOLO_FWD
                 - Stop applying corrections to align with center
                 - Go forward at high speed
@@ -229,34 +239,112 @@ def control_drone(corr_x, corr_y, dist):
             * END
                 - land command / Emergency stop
     '''
-    #TODO: reverse state changes?
 
     global hoop_fly_state
     global start_yolo_time
     global hoop_flying_enabled
     global current_hoop_color
 
+    global start_brake_time
+    global executing_command
+    global time_last_command_sent
+    global stabilizing
+    global time_started_stabilizing
+
+    brake_seconds = 0.25
+
     yolo_time = 1.25    #1s #TODO: make ticker?
 
-    if hoop_fly_state == HoopFlyState.NONE:
+    offset_x = 14
+    #TODO: replace multip w ticker
+    if abs(corr_x) > 35 and dist > 4:
+        mult_x = 30 + offset_x
+    elif abs(corr_x) > 25 and dist > 3:
+        mult_x = 20 + offset_x
+    elif abs(corr_x) > 15 and dist > 2:
+        mult_x = 14 + offset_x
+    elif abs(corr_x) > 5:
+        mult_x = 9 + offset_x
+    else:   #Very tiny differences
+        mult_x = 5 + offset_x
+
+    offset_y = 8
+    if abs(corr_y) > 35 and dist > 4:
+        mult_y = 20 + offset_y
+    elif abs(corr_y) > 25 and dist > 3:
+        mult_y = 16 + offset_y
+    elif abs(corr_y) > 15 and dist > 2:
+        mult_y = 15 + offset_y
+    elif abs(corr_y) > 5:
+        mult_y = 13 + offset_y
+    else:   #Very tiny differences
+        mult_y = 10 + offset_y
+    x_dir = sign(corr_x) * mult_x
+    y_dir = sign(corr_y) * mult_y
+    step_time = 0.5
+    stabilize_time = 0.50
+
+
+    if executing_command:   # Don't process state, we've just sent out a command
+        if time() - time_last_command_sent > step_time:
+            executing_command = False
+            drone_set_roll(0)
+            drone_set_throttle(15)
+            drone_set_pitch(0)
+            stabilizing = True
+            time_started_stabilizing = time()
+    elif stabilizing:   # Don't process state, we're still stabilizing
+        if time() - time_started_stabilizing > stabilize_time:
+            stabilizing = False
+
+    elif hoop_fly_state == HoopFlyState.NONE:
         print(f"In HoopFlyState NONE ({current_hoop_color})")
         if corr_x is not None and corr_y is not None:
             hoop_fly_state = HoopFlyState.LOCK
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
         print(f"In HoopFlyState LOCK ({current_hoop_color})")
-        #TODO: show these on CP instead of printing
-        drone_set_roll(corr_x*tickers['roll'].value)
-        drone_set_throttle(corr_y*tickers['throttle'].value)
-        if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value:
-            hoop_fly_state = HoopFlyState.LOCK_FWD
+        # drone_set_roll(corr_x*tickers['roll'].value)
+        # drone_set_throttle(corr_y*tickers['throttle'].value)
+        # Require twice the accuracy for YOLO
+        if max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2) \
+            and dist < tickers['thr_yolo'].value:
+            # switch over anyways, because we might have flown through already...
+            hoop_fly_state = HoopFlyState.YOLO_FWD
+            if current_hoop_color == HOOP_COLOR.BLUE:
+                # hoop_fly_state = HoopFlyState.END
+                print("Blue fwd? Shouldn't happen? I think?")
+                pass    #ignore I think? Will not happen? Or will it?
+            else:
+                if current_hoop_color == HOOP_COLOR.RED:
+                    current_hoop_color = HOOP_COLOR.YELLOW
+                elif current_hoop_color == HOOP_COLOR.YELLOW:
+                    current_hoop_color = HOOP_COLOR.BLUE
+                else:
+                    print("This shouldn't happen... Stopping...")
+                    current_hoop_color = HOOP_COLOR.NONE
+                    hoop_flying_enabled = False
+                    drone_land()
+        drone_set_roll(x_dir*tickers['roll'].value)
+        drone_set_throttle(y_dir*tickers['throttle'].value)
+        print(f"X/Y: {x_dir:.1f}/{y_dir:.1f} avgcorr: {corr_x:.1f}/{corr_y:.1f} d: {dist}")
+        if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
+          and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value:    #Don't move at yolo dist. Just balance
+            drone_set_pitch(tickers['pitch'].value)
+            print(f"Pitching: {tickers['pitch'].value}")
+        executing_command = True
+        time_last_command_sent = time()
+        # if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value:
+        #     hoop_fly_state = HoopFlyState.LOCK_FWD
     elif hoop_fly_state == HoopFlyState.LOCK_FWD:
         print(f"In HoopFlyState LOCK_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["pitch"].value)
-        drone_set_roll(corr_x*tickers['roll'].value)
-        drone_set_throttle(corr_y
+        drone_set_roll(x_dir*tickers['roll'].value)
+        drone_set_throttle(y_dir
                             * tickers['throttle'].value
-                            + (tickers["pitch_v_corr"].value)
+                            + (tickers["pitch_v_corr"].value))
+        executing_command = True
+        time_last_command_sent = time()
         if max(abs(corr_x), abs(corr_y)) > tickers['fwdthresh'].value * 0.8 \
                 and dist > tickers['thr_yolo'].value * 1.5:
             hoop_fly_state = HoopFlyState.LOCK
@@ -278,8 +366,6 @@ def control_drone(corr_x, corr_y, dist):
                     current_hoop_color = HOOP_COLOR.NONE
                     hoop_flying_enabled = False
                     drone_land()
-        # else:
-            # print("B", max(abs(corr[0]), abs(corr[1])), corr[0], corr[1], abs(corr[0]), abs(corr[1]), tickers['fwdthresh'].value)
     elif hoop_fly_state == HoopFlyState.YOLO_FWD:
         print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["vPitch_yolo"].value)
@@ -369,10 +455,11 @@ def hoop_flying():
         #TODO: currently, when testing with a recorded video, the avcor is TOTALLY wrong
         #       I'm going to assume this will be automatically fixed when using the cam again, 
         #       but... double check!
-        print(f"Avcor: {avcor[0]:.2f},{avcor[1]:.2f}; Avdist: {Float(avdist):.2h}m")
+        # print(f"Avcor: {avcor[0]:.2f},{avcor[1]:.2f}; Avdist: {Float(avdist):.2h}m")
         # print(f"Hoop detection took {Float(time()-start):.2h}s")
         #TODO: on the video one iteration takes 100ms. This is fine. But on the cam it might be faster.
         #       We might want to slow down the "acting" on the commands a bit
+
         control_drone(avcor[0], avcor[1], avdist)
 
 
