@@ -1,6 +1,6 @@
 #!/bin/bash
 
-systemctl status NetworkManager | grep "inactive"
+systemctl status NetworkManager | head | grep "inactive"
 if [ $? -eq 0 ]; then
     echo "Is the NetworkManager on?"
     exit -1
