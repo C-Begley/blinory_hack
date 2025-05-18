@@ -2,9 +2,10 @@ import numpy as np
 
 
 cam_type = "webcam"
-calibration_base_dir = "calibration_data/" + cam_type +"/"
-image_base_dir = "calibration_images/" + cam_type + "/"
-calibration_base_dir = "calibration_data/" + cam_type + "/"
+base_dir = "/home/cbegley/code/blinory_hack/formation_flying/"
+calibration_base_dir = base_dir + "calibration_data/" + cam_type +"/"
+image_base_dir = base_dir + "calibration_images/" + cam_type + "/"
+calibration_base_dir = base_dir + "calibration_data/" + cam_type + "/"
 calibration_data = calibration_base_dir + "calibration_data.npz"
 image_type = ".jpg"
 train_image_loc = image_base_dir + "training"

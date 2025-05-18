@@ -37,7 +37,7 @@ pygame.display.set_caption("Drone Controller")
 
 KEYBOARD_PRESS_WEIGHT = 60
 
-PRINT_LOOPTIME = True  #Can be used to measure the time one full iteration takes
+PRINT_LOOPTIME = False  #Can be used to measure the time one full iteration takes
 
 stream_surface = None  #Used as a way to pass the stream to a different thread
 hoop_flying_enabled = False
@@ -104,7 +104,7 @@ def process_stream():
     global counter
     counter += 1
     cnt = 0
-    aruco = flyer.formation_flyer(1152, 2048, False)
+    aruco = flyer.formation_flyer(2048, 1152, False)
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
@@ -118,37 +118,56 @@ def process_stream():
             cnt = 0
         for framedata in framedatas:
             (frame, w, h, ls) = framedata
+            suggested_correction = None
+            suggested_yaw = None
+            suggested_z = None
             if frame is not None:
                 frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
                 frame = frame.reshape((h, ls//3, 3))
                 frame = frame[:,:w,:]
+                frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
                 if hoop_flying_enabled:
-                    frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR) # cv2 uses BGR
                     frame, suggested_correction = hoop_detector.process_frame(frame)
                 elif aruco_flying_enabled:
-                        aruco.process_frame(frame)
-                        if(aruco.correction):
-                            suggested_correction = (
-                                100*(aruco.x_cor/aruco.centre_x),
-                                100*(aruco.y_cor/aruco.centre_y))
-                        else:
-                            suggested_correction = None
+                    aruco.process_frame(frame)
+                    if(aruco.correction):
+                        suggested_correction = (
+                            -10*(aruco.x_cor/aruco.centre_x),
+                            10*(aruco.y_cor/aruco.centre_y))
+                        suggested_yaw = aruco.yaw_cor
+                        suggested_z = 10*aruco.z_cor
+                    else:
+                        suggested_correction = None
+                        suggested_yaw = None
+                        suggested_z = None
+                    print(suggested_correction, prev_correct_cmd)
+
                 if suggested_correction == None and prev_correct_cmd:
                     print("all to 0: ")
                     drone.set_roll(0)
                     drone.set_throttle(0)
+                    drone.set_yaw(0)
                     prev_correct_cmd = False
                 else:
-                    if suggested_correction \
-                    and suggested_correction[0] \
-                    and suggested_correction[1]:
-                        print("Setting_roll: ",
-                                suggested_correction[0]*tickers['roll'].value)
-                        drone.set_roll(suggested_correction[0]*tickers['roll'].value*0.3)
-                        print("Setting_throttle: ",
-                                suggested_correction[1]*tickers['throttle'].value)
-                        drone.set_throttle(suggested_correction[1]*tickers['throttle'].value*0.3)
-                        prev_correct_cmd = True
+                    if suggested_correction != None:
+                        if suggested_correction \
+                        and suggested_correction[0] \
+                        and suggested_correction[1]:
+                            print("Setting_roll: ",
+                                    suggested_correction[0]*tickers['roll'].value)
+                            drone.set_roll(suggested_correction[0]*tickers['roll'].value)
+                            print("Setting_throttle: ",
+                                    suggested_correction[1]*tickers['throttle'].value)
+                            drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
+                            prev_correct_cmd = True
+                if suggested_yaw != None:
+                    print("Setting_yaw ",
+                                    suggested_yaw)
+                    drone.set_yaw(suggested_yaw)
+                if suggested_z != None:
+                    print("Setting_pitch ",
+                                    suggested_z*tickers['pitch'].value)
+                    drone.set_pitch(suggested_z*tickers['pitch'].value)
 
                 set_stream_surface(frame)
         if PRINT_LOOPTIME:

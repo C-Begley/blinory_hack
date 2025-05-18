@@ -35,18 +35,14 @@ class formation_flyer():
     def __init__(self, frame_width = 1024, frame_height = 1024, display_frame=True, draw_marker=True): 
         self.x_tol = 10
         self.y_tol = 10
+        self.z_tol = 0.05
+        self.z_target = 0.8
         self.roll_tol = 10
         self.yaw_tol = 10
         self.pitch_tol = 10
 
-        self.x_cor = 0
-        self.y_cor = 0
-        self.roll_cor = 0
-        self.yaw_cor = 0
-        self.pitch_cor = 0
-
+        self.reset_corrections()
         self.correction = False
-
         self.set_dimensions(frame_width, frame_height)
 
         self.display_frame = display_frame
@@ -61,6 +57,14 @@ class formation_flyer():
         parameters = cv2.aruco.DetectorParameters()
         self.detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
 
+    def reset_corrections(self):
+            self.x_cor = 0
+            self.y_cor = 0
+            self.z_cor = 0
+            self.yaw_cor = 0
+            self.pitch_cor = 0
+            self.roll_cor = 0
+
     def set_dimensions(self, frame_width, frame_height):
         self.frame_height = frame_height
         self.frame_width = frame_width
@@ -68,25 +72,38 @@ class formation_flyer():
         self.centre_y = frame_height/2
 
     def get_centre(self, corners):
+        print(corners)
         x_sum = corners[0][0][0][0]+ corners[0][0][1][0]+ corners[0][0][2][0]+ corners[0][0][3][0]
         y_sum = corners[0][0][0][1]+ corners[0][0][1][1]+ corners[0][0][2][1]+ corners[0][0][3][1]
         
         self.x_cor = update_value(self.centre_x-(x_sum*.25), self.x_tol)
         self.y_cor = update_value(self.centre_y-(y_sum*.25), self.y_tol)
 
-    def get_angles(self, frame, corners, ids):
+    def get_vectors(self, frame, corners, ids):
         # Draw a square around detected markers in the video frame
         cv2.aruco.drawDetectedMarkers(frame, corners, ids)
 
         # Flatten the corners to match the expected input shape for solvePnP
         img_points = np.array(corners, dtype=np.float32).reshape(-1, 2)
-        ret, rvecs, tvecs = cv2.solvePnP(c.obj_points, img_points, self.mtx, self.dist)
+        ret, self.rvecs, self.tvecs = cv2.solvePnP(c.obj_points, img_points, self.mtx, self.dist)
 
-        transform_translation_x = rvecs[0]
-        transform_translation_y = rvecs[1]
-        transform_translation_z = rvecs[2]
+    def get_distance(self):
+        self.z = self.tvecs[2][0]
+
+        if self.z - self.z_tol > self.z_target:
+            self.z_cor = self.z -self.z_target
+        elif self.z_target > self.z + self.z_tol:
+            self.z_cor = self.z-self.z_target
+        else:
+            self.z_cor = 0 
+        print(self.z)
+
+    def get_angles(self):
+        transform_translation_x = self.rvecs[0]
+        transform_translation_y = self.rvecs[1]
+        transform_translation_z = self.rvecs[2]
     
-        euler = calculate_euler_angles(rvecs)
+        euler = calculate_euler_angles(self.rvecs)
 
         self.roll_cor = update_value(euler[2], self.roll_tol)
         self.pitch_cor = update_value(euler[0], self.pitch_tol)
@@ -98,7 +115,9 @@ class formation_flyer():
                 print("More markers received than expected")
             else:
                 self.get_centre(corners)
-                self.get_angles(frame, corners, ids)
+                self.get_vectors(frame, corners, ids)
+                self.get_angles()
+                self.get_distance()
                 if(self.draw_marker):
                     cv2.aruco.drawDetectedMarkers(frame, corners, ids)
 
@@ -116,13 +135,15 @@ class formation_flyer():
                 print("More markers received than expected")
             else:
                 self.find_corrections(frame,corners,ids)
-        
+        else:
+            self.reset_corrections()
+
         if(self.display_frame):
             cv2.imshow('frame',frame)
 
         if(1):
-            print("Move x: {:2f}, y: {:2f}, roll : {:2f}, pitch: {:2f}, yaw: {:2f}".format(
-                self.x_cor, self.y_cor, self.roll_cor, self.pitch_cor, self.yaw_cor))
+            print("Move x: {:2f}, y: {:2f}, z {:2f}, roll : {:2f}, pitch: {:2f}, yaw: {:2f}".format(
+                self.x_cor, self.y_cor, self.z_cor, self.roll_cor, self.pitch_cor, self.yaw_cor))
 
         self.correction = (self.x_cor != 0) or (self.y_cor != 0) or (self.yaw_cor !=0)
 
