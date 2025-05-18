@@ -62,7 +62,14 @@ last_corr_y = 0
 corr_boost_x = 0
 corr_boost_y = 0
 
+offset_boost_x = 0
+offset_boost_y = 0
+
+pitching = False    #Indicator if we're pitching in hoop flying, and should ignore frames
+
 running = True
+
+time_since_hoop_start = None
 
 class HoopFlyState(Enum):
     NONE = 0,
@@ -149,9 +156,9 @@ sliders = [
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         # Hoop fly aggressiveness
-        "roll":         Ticker(220, 100, -10, 10, 1.0, label_text="×Roll:", step=0.1),
-        "throttle":     Ticker(420, 100, -10, 10, 1.0, label_text="×Throttle:", step=0.1),
-        "pitch":        Ticker(620, 100, 0, 100, 30, label_text="vPitch:", step=2),
+        "roll":         Ticker(220, 100, -30, 30, 1.0, label_text="×Roll:", step=1),
+        "throttle":     Ticker(420, 100, -30, 30, 0.0, label_text="×Throttle:", step=1),
+        "pitch":        Ticker(620, 100, 0, 100, 20, label_text="vPitch:", step=2),
         # Threshold before moving forward
         #TODO: calibrate
         "fwdthresh":    Ticker(220, 150, 0, 100, 15, label_text="ΔThr", step=2),
@@ -159,7 +166,7 @@ tickers = {
         #TODO: calibrate
         "pitch_v_corr": Ticker(370, 150, -50, +50, 0, label_text="↕Pitch", step=2),
         # Distance before YOLO state
-        "thr_yolo": Ticker(570, 150, 0, 10, 2.2, label_text="ThrYolo", step=0.25),
+        "thr_yolo": Ticker(570, 150, 0, 10, 2.3, label_text="ThrYolo", step=0.1),
         # Yolo forward speed
         "vPitch_yolo": Ticker(770, 150, 0, 100, 50, label_text="vPitchYolo", step=5),
 
@@ -173,8 +180,8 @@ tickers = {
         "smoothing":         Ticker(50, 650, 0, 50, 5, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
-        "cRoll":        Ticker(50, 700, -100, 100, 5, label_text="cRoll", step=5),
-        "cPitch":       Ticker(250, 700, -100, 100, 15, label_text="cPitch", step=5),
+        "cRoll":        Ticker(50, 700, -100, 100, 10, label_text="cRoll", step=5),
+        "cPitch":       Ticker(250, 700, -100, 100, 12, label_text="cPitch", step=5),
         "cYaw":         Ticker(450, 700, -100, 100, 3, label_text="cYaw", step=1),
         "cThrottle":    Ticker(650, 700, -100, 100, 0, label_text="cThrottle", step=5),
 }
@@ -223,7 +230,7 @@ def smoothen_distance(avdist, estdist, factor):
 def sign(val):
     return copysign(1, val)
 
-def control_drone(corr_x, corr_y, dist):
+def control_drone(corr_x, corr_y, dist, certainty):
     '''
         FSM:
             * NONE:
@@ -265,48 +272,56 @@ def control_drone(corr_x, corr_y, dist):
     global last_corr_y
     global corr_boost_x
     global corr_boost_y
+    global offset_boost_x
+    global offset_boost_y
 
-    brake_seconds = 0.25
+    global pitching
+    global time_since_hoop_start
 
-    yolo_time = 1.25    #1s #TODO: make ticker?
+    time_before_yolo = 3
+    brake_seconds = 0.15
+
+    # yolo_time = 1.25    #1s #TODO: make ticker?
+    yolo_time = 1.8
 
     offset_x = 10 * tickers['roll'].value
     #TODO: replace multip w ticker
     if abs(corr_x) > 35 and dist > 4:
-        mult_x = 30 + offset_x
+        mult_x = 28 + offset_x
     elif abs(corr_x) > 25 and dist > 3:
-        mult_x = 20 + offset_x
+        mult_x = 18 + offset_x
     elif abs(corr_x) > 15 and dist > 2:
-        mult_x = 14 + offset_x
+        mult_x = 15 + offset_x
     elif abs(corr_x) > 5:
-        mult_x = 9 + offset_x
+        mult_x = 10 + offset_x
     else:   #Very tiny differences
-        mult_x = 7 + offset_x
+        mult_x = 9 + offset_x
 
     offset_y = 8 * tickers['throttle'].value
     if abs(corr_y) > 35 and dist > 4:
-        mult_y = 20 + offset_y
+        mult_y = 18 + offset_y
     elif abs(corr_y) > 25 and dist > 3:
-        mult_y = 16 + offset_y
-    elif abs(corr_y) > 15 and dist > 2:
         mult_y = 15 + offset_y
+    elif abs(corr_y) > 15 and dist > 2:
+        mult_y = 14 + offset_y
     elif abs(corr_y) > 5:
         mult_y = 13 + offset_y
     else:   #Very tiny differences
-        mult_y = 12 + offset_y
+        mult_y = 13 + offset_y
     x_dir = sign(corr_x) * mult_x
     y_dir = sign(corr_y) * mult_y
-    step_time = 0.4
-    stabilize_time = 0.50
+    step_time = 0.3
+    stabilize_time = 0.40
 
 
     if executing_command:   # Don't process state, we've just sent out a command
         if time() - time_last_command_sent > step_time:
             executing_command = False
-            drone_set_roll(0)
-            drone_set_throttle(15)
+            drone_set_roll(0 + offset_boost_x)
+            drone_set_throttle( 0 + offset_boost_y)
             drone_set_pitch(0)
             stabilizing = True
+            pitching = False
             time_started_stabilizing = time()
     elif stabilizing:   # Don't process state, we're still stabilizing
         if time() - time_started_stabilizing > stabilize_time:
@@ -314,20 +329,24 @@ def control_drone(corr_x, corr_y, dist):
             # Check if we're actually making progress...
             if sign(corr_x) == sign(last_corr_x):
                 if abs(corr_x) >= abs(last_corr_x):
-                    corr_boost_x += 0.5
+                    corr_boost_x += 0.6
                 else:
-                    corr_boost_x -= 0.3
+                    corr_boost_x -= 0.05
             else:
-                corr_boost_x -= 0.5
+                corr_boost_x = 0
+
             if sign(corr_y) == sign(last_corr_y):
                 if abs(corr_y) >= abs(last_corr_y):
                     corr_boost_y += 0.5
                 else:
-                    corr_boost_y -= 0.3
+                    corr_boost_y -= 0.05
             else:
-                corr_boost_y -= 0.5
+                corr_boost_y = 0
             last_corr_x = corr_x
             last_corr_y = corr_y
+
+        offset_boost_x += sign(corr_x) * 0.05
+        offset_boost_y += sign(corr_y) * 0.05
 
     elif hoop_fly_state == HoopFlyState.NONE:
         print(f"In HoopFlyState NONE ({current_hoop_color})")
@@ -336,10 +355,16 @@ def control_drone(corr_x, corr_y, dist):
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
         print(f"In HoopFlyState LOCK ({current_hoop_color})")
-        # Require twice the accuracy for YOLO
-        if max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2) \
-            and dist < tickers['thr_yolo'].value:
+        if (max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2.5)) \
+          and (dist < tickers['thr_yolo'].value) \
+          and (certainty == hoop_detector.PredictionCertainty.CERTAIN) \
+          and (time() - time_since_hoop_start > time_before_yolo):
+            print("TT: ", time() - time_since_hoop_start, "TBY: ", time_before_yolo)
+
+            time_since_hoop_start = time()
+            print(f"YOLO CERT: {certainty}")
             # switch over anyways, because we might have flown through already...
+            #TODO: This comment is no longer correct I think?
             hoop_fly_state = HoopFlyState.YOLO_FWD
             avcor = (0,0)
             avdist = 0
@@ -357,18 +382,26 @@ def control_drone(corr_x, corr_y, dist):
                     current_hoop_color = HOOP_COLOR.NONE
                     hoop_flying_enabled = False
                     drone_land()
-        drone_set_roll(x_dir + (corr_boost_x*sign(x_dir)))
-        drone_set_throttle(y_dir + (corr_boost_y*sign(y_dir)))
-        print(f"X/Y: {x_dir:.1f}/{y_dir:.1f} avgcorr: {corr_x:.1f}/{corr_y:.1f} d: {dist} B: {corr_boost_x:.1f},{corr_boost_y:.1f}")
-        if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
+        elif max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
           and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value:    #Don't move at yolo dist. Just balance
             drone_set_pitch(tickers['pitch'].value)
+            pitching = True
             print(f"Pitching: {tickers['pitch'].value}")
+        else:
+            drone_set_roll(x_dir \
+                        + (corr_boost_x*sign(x_dir)) \
+                        + offset_boost_x)
+            drone_set_throttle(y_dir \
+                            + (corr_boost_y*sign(y_dir)) \
+                            + offset_boost_y)
+        print(f"X/Y: {x_dir:.1f}/{y_dir:.1f} avgcorr: {corr_x:.1f}/{corr_y:.1f} d: {dist:.1f}\n\t" \
+              f"B: {corr_boost_x:.1f},{corr_boost_y:.1f} b: {offset_boost_x:.1f},{offset_boost_y:.1f}")
         executing_command = True
         time_last_command_sent = time()
         # if max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value:
         #     hoop_fly_state = HoopFlyState.LOCK_FWD
     elif hoop_fly_state == HoopFlyState.LOCK_FWD:
+        print("ERROR: THIS STATE IS DISABLED!!!")
         print(f"In HoopFlyState LOCK_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["pitch"].value)
         drone_set_roll(x_dir*tickers['roll'].value)
@@ -401,17 +434,18 @@ def control_drone(corr_x, corr_y, dist):
     elif hoop_fly_state == HoopFlyState.YOLO_FWD:
         print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
         drone_set_pitch(tickers["vPitch_yolo"].value)
-        # drone_set_roll(0)
-        # drone_set_throttle(0)
+        drone_set_roll(offset_boost_x/2)
+        drone_set_throttle(offset_boost_y*1.2)
+        pitching = True
         if start_yolo_time == -1:
             print(f"SETTING START_YOLO_TIME TO {time()}")
             start_yolo_time = time()
         elif (time() - start_yolo_time) < yolo_time:
-            # print(f"{time()-start_yolo_time}/{yolo_time} ({time()} - {start_yolo_time})")
             drone_set_pitch(tickers["vPitch_yolo"].value)
         else:
             print("DONE YOLO")
             drone_set_pitch(0)
+            pitching = False
             print(f"SETTING START_YOLO_TIME TO {-1}")
             start_yolo_time = -1
             if current_hoop_color == HOOP_COLOR.BLUE:
@@ -440,6 +474,8 @@ def hoop_flying():
     global avcor
     global avdist
 
+    global pitching
+
     avcor = (0,0)   #Moving average for corrections
     avdist = 10
     while running:
@@ -465,21 +501,25 @@ def hoop_flying():
                 case hoop_detector.PredictionCertainty.CERTAIN:
                     theta = 1
                 case hoop_detector.PredictionCertainty.RELIABLE:
-                    theta = 0.3
+                    theta = 0.5
+                #TODO: calculate correction ourselves in this case? Is it correct now?
                 case hoop_detector.PredictionCertainty.DIRECTION_ESTIMATE:
-                    theta = 0.2
+                    print(f"Estimate: {suggested_correction}")
+                    theta = 0.3
                 case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
-                    theta = 0.05
+                    theta = 0.00
                 case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
-                    theta = 0.01
+                    theta = 0.00
                 case hoop_detector.PredictionCertainty.NONE:
                     theta = 0.00
                 case default:
                     print("???", certainty)
                     theta = 0
-            avcor = smoothen_correction(avcor,
-                                        suggested_correction,
-                                        tickers['smoothing'].value, theta=theta)
+
+            if not pitching:
+                avcor = smoothen_correction(avcor,
+                                            suggested_correction,
+                                            tickers['smoothing'].value, theta=theta)
 
             #TODO: I'm not sure if applying the same smoothing here as with the correction is wise.
             #       It might be too strong?
@@ -496,7 +536,7 @@ def hoop_flying():
         #TODO: on the video one iteration takes 100ms. This is fine. But on the cam it might be faster.
         #       We might want to slow down the "acting" on the commands a bit
 
-        control_drone(avcor[0], avcor[1], avdist)
+        control_drone(avcor[0], avcor[1], avdist, certainty)
 
 
 def process_stream():
@@ -544,6 +584,7 @@ def process_events():
     global hoop_fly_state
     global avcor
     global avdist
+    global time_since_hoop_start
 
     current_slider = None
     clock = pygame.time.Clock()
@@ -617,6 +658,7 @@ def process_events():
                         hoop_flying_enabled = not hoop_flying_enabled
                         hoop_fly_state = HoopFlyState.NONE
                         current_hoop_color = HOOP_COLOR.RED
+                        time_since_hoop_start = time()
                         drone_set_throttle(0)
                         drone_set_roll(0)
                         drone_set_pitch(0)
