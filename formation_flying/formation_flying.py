@@ -87,6 +87,9 @@ class formation_flyer():
         img_points = np.array(corners, dtype=np.float32).reshape(-1, 2)
         ret, self.rvecs, self.tvecs = cv2.solvePnP(c.obj_points, img_points, self.mtx, self.dist)
 
+    def change_distance(self, target):
+        self.z_target = target
+
     def get_distance(self):
         self.z = self.tvecs[2][0]
 

@@ -26,7 +26,7 @@ class Button:
 class Slider:
     def __init__(self, x, y, length, min_val, max_val, label,
                  orientation='horizontal', init_centered=False,
-                 snap_back=False, action=None):
+                 snap_back=False, action=None, rounding=0):
         self.orientation = orientation
         self.rect = pygame.Rect(x, y, length, 20)
         self.min = min_val
@@ -37,6 +37,7 @@ class Slider:
         self.knob_d = 8
         self.initial_value = 0 if init_centered else min_val
         self.action=action
+        self.rounding = rounding
 
         # Create rect based on orientation
         if self.orientation == 'horizontal':
@@ -72,7 +73,7 @@ class Slider:
         pygame.draw.circle(surface, BLACK, self.handle_rect.center, self.knob_d)
 
         font = pygame.font.Font(None, 24)
-        text = font.render(f"{self.label}: {int(self.value)}", True, BLACK)
+        text = font.render(f"{self.label}: {round(self.value, self.rounding)}", True, BLACK)
         surface.blit(text, (self.rect.x, self.rect.y - 30))
 
     def set_value(self, val):

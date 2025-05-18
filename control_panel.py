@@ -30,8 +30,8 @@ from ui_elements import Button, Slider, Ticker
 #TODO: add one try-catch around entire program that will send an emergency stop before crashing?
 
 # Set up the window
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 1000
+WINDOW_HEIGHT = 800
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
@@ -55,6 +55,7 @@ def exit():
     running = False
 
 drone = Drone()
+aruco = flyer.formation_flyer(2048, 1152, False)
 
 # Create UI elements
 buttons = [
@@ -73,15 +74,15 @@ sliders = [
            snap_back=True, action=drone.set_pitch),
     Slider(50, 450, 200, -100, 100, "Yaw", init_centered=True, snap_back=True,
            action=drone.set_yaw),
-    Slider(50, 550, 200, -100, 100, "Roll", init_centered=True, snap_back=True,
-           action=drone.set_roll),
+    Slider(50, 550, 200, 0.2, 2, "FF Distance", init_centered=True, snap_back=False,
+           action=aruco.change_distance, rounding=2),
 ]
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         "roll": Ticker(200, 100, -10, 10, 0, label_text="×Roll:"),
         "pitch": Ticker(400, 100, -10, 10, 0, label_text="×Pitch:"),
-        "throttle": Ticker(600, 100, -10, 10, 0, label_text="×Throttle:")
+        "throttle": Ticker(600, 100, -10, 10, 0, label_text="×Throttle:"),
 }
 
 def set_stream_surface(frame):
@@ -104,7 +105,6 @@ def process_stream():
     global counter
     counter += 1
     cnt = 0
-    aruco = flyer.formation_flyer(2048, 1152, False)
     for _frame in drone_stream.start_video_stream():
         if not running:
             break
