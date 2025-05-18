@@ -345,8 +345,8 @@ def control_drone(corr_x, corr_y, dist, certainty):
             last_corr_x = corr_x
             last_corr_y = corr_y
 
-        offset_boost_x += sign(corr_x) * 0.05
-        offset_boost_y += sign(corr_y) * 0.05
+        offset_boost_x += sign(corr_x) * (0.03 if abs(offset_boost_x) > 3 else 0.1)
+        offset_boost_y += sign(corr_y) * (0.03 if abs(offset_boost_y) > 3 else 0.1)
 
     elif hoop_fly_state == HoopFlyState.NONE:
         print(f"In HoopFlyState NONE ({current_hoop_color})")
