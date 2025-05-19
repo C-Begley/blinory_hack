@@ -449,10 +449,10 @@ def control_drone(corr_x, corr_y, dist, certainty):
             overrule_roll = -overrule_w_x
         elif keys_pressed[pygame.K_d]:
             overrule_roll = overrule_w_x
-        if keys_pressed[pygame.K_a]:
-            overrule_throttle = -overrule_w_y
-        elif keys_pressed[pygame.K_f]:
+        if keys_pressed[pygame.K_r]:
             overrule_throttle = overrule_w_y
+        elif keys_pressed[pygame.K_f]:
+            overrule_throttle = -overrule_w_y
 
         drone_set_pitch(tickers["vPitch_yolo"].value)
         drone_set_roll(0 + overrule_roll)
