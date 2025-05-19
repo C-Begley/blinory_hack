@@ -191,3 +191,5 @@ class Ticker:
             elif self.down_button_rect.collidepoint(mouse_pos):
                 self.value = max(self.value - self.step, self.min_val)
 
+    def set_value(self, value):
+        self.value = value
