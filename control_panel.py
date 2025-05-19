@@ -375,7 +375,10 @@ def control_drone(corr_x, corr_y, dist, certainty):
             else:
                 if current_hoop_color == HOOP_COLOR.RED:
                     current_hoop_color = HOOP_COLOR.YELLOW
+                    tickers['thr_yolo'].set_value = tickers['thr_yolo'].value - 0.2
+                    tickers['fwdthresh'].set_value = tickers['thr_yolo'].value - 1
                 elif current_hoop_color == HOOP_COLOR.YELLOW:
+                    tickers['thr_yolo'].set_value = tickers['thr_yolo'].value - 0.1
                     current_hoop_color = HOOP_COLOR.BLUE
                 else:
                     print("This shouldn't happen... Stopping...")
