@@ -178,7 +178,7 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 30, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 50, 5, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 3, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 10, label_text="cRoll", step=5),
@@ -522,7 +522,7 @@ def hoop_flying():
         if suggested_correction \
           and suggested_correction[0] \
           and suggested_correction[1]:
-            suggested_correction = (suggested_correction[0], suggested_correction[1] + 30)
+            suggested_correction = (suggested_correction[0], suggested_correction[1] + 25)
             match(certainty):
                 case hoop_detector.PredictionCertainty.CERTAIN:
                     theta = 1
