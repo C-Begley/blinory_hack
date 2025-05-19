@@ -64,6 +64,7 @@ corr_boost_y = 0
 
 offset_boost_x = 0
 offset_boost_y = 0
+yolo_time = 2.1
 
 pitching = False    #Indicator if we're pitching in hoop flying, and should ignore frames
 
@@ -157,16 +158,16 @@ sliders = [
 tickers = {
         # Hoop fly aggressiveness
         "roll":         Ticker(220, 100, -30, 30, 1.0, label_text="×Roll:", step=1),
-        "throttle":     Ticker(420, 100, -30, 30, 0.0, label_text="×Throttle:", step=1),
+        "throttle":     Ticker(420, 100, -30, 30, 1.0, label_text="×Throttle:", step=1),
         "pitch":        Ticker(620, 100, 0, 100, 20, label_text="vPitch:", step=2),
         # Threshold before moving forward
         #TODO: calibrate
-        "fwdthresh":    Ticker(220, 150, 0, 100, 15, label_text="ΔThr", step=2),
+        "fwdthresh":    Ticker(220, 150, 0, 100, 16, label_text="ΔThr", step=1),
         # Correct camera movement when pitching forward
         #TODO: calibrate
         "pitch_v_corr": Ticker(370, 150, -50, +50, 0, label_text="↕Pitch", step=2),
         # Distance before YOLO state
-        "thr_yolo": Ticker(570, 150, 0, 10, 2.3, label_text="ThrYolo", step=0.1),
+        "thr_yolo": Ticker(570, 150, 0, 10, 2.8, label_text="ThrYolo", step=0.1),
         # Yolo forward speed
         "vPitch_yolo": Ticker(770, 150, 0, 100, 50, label_text="vPitchYolo", step=5),
 
@@ -174,14 +175,14 @@ tickers = {
         "manual_roll_speed":        Ticker(50, 600, 20, 100, 50, label_text="MvRoll", step=10),
         "manual_pitch_speed":       Ticker(250, 600, 20, 100, 50, label_text="MvPitch", step=10),
         "manual_throttle_speed":    Ticker(450, 600, 20, 100, 50, label_text="MvThrottle", step=10),
-        "manual_yaw_speed":         Ticker(670, 600, 20, 100, 50, label_text="MvYaw", step=10),
+        "manual_yaw_speed":         Ticker(670, 600, 20, 100, 30, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
         "smoothing":         Ticker(50, 650, 0, 50, 5, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 10, label_text="cRoll", step=5),
-        "cPitch":       Ticker(250, 700, -100, 100, 12, label_text="cPitch", step=5),
+        "cPitch":       Ticker(250, 700, -100, 100, 10, label_text="cPitch", step=1),
         "cYaw":         Ticker(450, 700, -100, 100, 3, label_text="cYaw", step=1),
         "cThrottle":    Ticker(650, 700, -100, 100, 0, label_text="cThrottle", step=5),
 }
@@ -278,13 +279,13 @@ def control_drone(corr_x, corr_y, dist, certainty):
     global pitching
     global time_since_hoop_start
 
+    global yolo_time
     time_before_yolo = 3
     brake_seconds = 0.15
 
     # yolo_time = 1.25    #1s #TODO: make ticker?
-    yolo_time = 1.8
 
-    offset_x = 10 * tickers['roll'].value
+    offset_x = 6 * tickers['roll'].value
     #TODO: replace multip w ticker
     if abs(corr_x) > 35 and dist > 4:
         mult_x = 28 + offset_x
@@ -297,9 +298,9 @@ def control_drone(corr_x, corr_y, dist, certainty):
     else:   #Very tiny differences
         mult_x = 9 + offset_x
 
-    offset_y = 8 * tickers['throttle'].value
+    offset_y = 6 * tickers['throttle'].value
     if abs(corr_y) > 35 and dist > 4:
-        mult_y = 18 + offset_y
+        mult_y = 16 + offset_y
     elif abs(corr_y) > 25 and dist > 3:
         mult_y = 15 + offset_y
     elif abs(corr_y) > 15 and dist > 2:
@@ -375,18 +376,21 @@ def control_drone(corr_x, corr_y, dist, certainty):
             else:
                 if current_hoop_color == HOOP_COLOR.RED:
                     current_hoop_color = HOOP_COLOR.YELLOW
-                    tickers['thr_yolo'].set_value = tickers['thr_yolo'].value - 0.2
-                    tickers['fwdthresh'].set_value = tickers['thr_yolo'].value - 1
+                    tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.2)
+                    tickers['fwdthresh'].set_value(tickers['fwdthresh'].value - 1)
+                    yolo_time = 1.8
                 elif current_hoop_color == HOOP_COLOR.YELLOW:
-                    tickers['thr_yolo'].set_value = tickers['thr_yolo'].value - 0.1
+                    tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.1)
                     current_hoop_color = HOOP_COLOR.BLUE
+                    yolo_time = 1.8
                 else:
                     print("This shouldn't happen... Stopping...")
                     current_hoop_color = HOOP_COLOR.NONE
                     hoop_flying_enabled = False
                     drone_land()
         elif max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
-          and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value:    #Don't move at yolo dist. Just balance
+          and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value \
+          and (certainty in [hoop_detector.PredictionCertainty.CERTAIN, hoop_detector.PredictionCertainty.RELIABLE]):    #Don't move at yolo dist. Just balance
             drone_set_pitch(tickers['pitch'].value)
             pitching = True
             print(f"Pitching: {tickers['pitch'].value}")
@@ -437,8 +441,10 @@ def control_drone(corr_x, corr_y, dist, certainty):
     elif hoop_fly_state == HoopFlyState.YOLO_FWD:
         print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
         keys_pressed = pygame.key.get_pressed()
-        cheat_w_x = 10
-        cheat_w_y = 10
+        cheat_w_x = 25
+        cheat_w_y = 25
+        cheat_roll = 0
+        cheat_throttle = 0
         if keys_pressed[pygame.K_a]:
             cheat_roll = -cheat_w_x
         elif keys_pressed[pygame.K_d]:
@@ -449,8 +455,8 @@ def control_drone(corr_x, corr_y, dist, certainty):
             cheat_throttle = cheat_w_y
 
         drone_set_pitch(tickers["vPitch_yolo"].value)
-        drone_set_roll(offset_boost_x/2 + cheat_roll)
-        drone_set_throttle(offset_boost_y*1.2 + cheat_throttle)
+        drone_set_roll(0 + cheat_roll)
+        drone_set_throttle(10 + cheat_throttle)
         pitching = True
         if start_yolo_time == -1:
             print(f"SETTING START_YOLO_TIME TO {time()}")
@@ -460,11 +466,14 @@ def control_drone(corr_x, corr_y, dist, certainty):
         else:
             print("DONE YOLO")
             drone_set_pitch(0)
+            drone_set_roll(0)
+            drone_set_throttle(0)
             pitching = False
             print(f"SETTING START_YOLO_TIME TO {-1}")
             start_yolo_time = -1
             if current_hoop_color == HOOP_COLOR.BLUE:
                 hoop_fly_state.END
+            pitching = True
             hoop_fly_state = HoopFlyState.BRAKE
             start_brake_time = time()
 
@@ -474,6 +483,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
         drone_set_throttle(20)
         # drone_set_throttle(0)
         if time() - start_brake_time > brake_seconds:
+            pitching = False
             hoop_fly_state = HoopFlyState.LOCK
 
     elif hoop_fly_state == HoopFlyState.END:
@@ -512,6 +522,7 @@ def hoop_flying():
         if suggested_correction \
           and suggested_correction[0] \
           and suggested_correction[1]:
+            suggested_correction = (suggested_correction[0], suggested_correction[1] + 30)
             match(certainty):
                 case hoop_detector.PredictionCertainty.CERTAIN:
                     theta = 1
