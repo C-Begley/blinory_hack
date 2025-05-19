@@ -449,10 +449,10 @@ def control_drone(corr_x, corr_y, dist, certainty):
             cheat_roll = -cheat_w_x
         elif keys_pressed[pygame.K_d]:
             cheat_roll = cheat_w_x
-        if keys_pressed[pygame.K_a]:
-            cheat_throttle = -cheat_w_y
-        elif keys_pressed[pygame.K_f]:
+        if keys_pressed[pygame.K_r]:
             cheat_throttle = cheat_w_y
+        elif keys_pressed[pygame.K_f]:
+            cheat_throttle = -cheat_w_y
 
         drone_set_pitch(tickers["vPitch_yolo"].value)
         drone_set_roll(0 + cheat_roll)
