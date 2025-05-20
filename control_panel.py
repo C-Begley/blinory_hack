@@ -64,7 +64,7 @@ corr_boost_y = 0
 
 offset_boost_x = 0
 offset_boost_y = 0
-yolo_time = 2.1
+yolo_time = 0   # This one will be set in control_drone!
 
 pitching = False    #Indicator if we're pitching in hoop flying, and should ignore frames
 
@@ -378,11 +378,11 @@ def control_drone(corr_x, corr_y, dist, certainty):
                     current_hoop_color = HOOP_COLOR.YELLOW
                     tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.2)
                     tickers['fwdthresh'].set_value(tickers['fwdthresh'].value - 1)
-                    yolo_time = 1.8
+                    yolo_time = 2.2     #This is still the RED hoop!
                 elif current_hoop_color == HOOP_COLOR.YELLOW:
                     tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.1)
                     current_hoop_color = HOOP_COLOR.BLUE
-                    yolo_time = 1.8
+                    yolo_time = 1.8     #This is still the YELLOW hoop!
                 else:
                     print("This shouldn't happen... Stopping...")
                     current_hoop_color = HOOP_COLOR.NONE
