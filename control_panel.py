@@ -72,6 +72,8 @@ running = True
 
 time_since_hoop_start = None
 
+force_yolo = False
+
 class HoopFlyState(Enum):
     NONE = 0,
     LOCK = 1,
@@ -280,6 +282,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
     global time_since_hoop_start
 
     global yolo_time
+    global force_yolo
     time_before_yolo = 3
     brake_seconds = 0.15
 
@@ -356,11 +359,13 @@ def control_drone(corr_x, corr_y, dist, certainty):
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
         print(f"In HoopFlyState LOCK ({current_hoop_color})")
-        if (max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2.5)) \
+        if ((max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2.5)) \
           and (dist < tickers['thr_yolo'].value) \
           and (certainty == hoop_detector.PredictionCertainty.CERTAIN) \
-          and (time() - time_since_hoop_start > time_before_yolo):
+          and (time() - time_since_hoop_start > time_before_yolo)) \
+          or force_yolo:
             print("TT: ", time() - time_since_hoop_start, "TBY: ", time_before_yolo)
+            force_yolo = False
 
             time_since_hoop_start = time()
             print(f"YOLO CERT: {certainty}")
@@ -611,6 +616,7 @@ def process_events():
     global avcor
     global avdist
     global time_since_hoop_start
+    global force_yolo
 
     current_slider = None
     clock = pygame.time.Clock()
@@ -680,6 +686,8 @@ def process_events():
                         drone.lift_off()
                     case pygame.K_BACKSPACE:
                         drone_land()
+                    case pygame.K_y:
+                        force_yolo = True
                     case pygame.K_h:
                         hoop_flying_enabled = not hoop_flying_enabled
                         hoop_fly_state = HoopFlyState.NONE
