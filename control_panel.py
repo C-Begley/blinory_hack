@@ -394,7 +394,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
                     hoop_flying_enabled = False
                     drone_land()
         elif max(abs(corr_x), abs(corr_y)) < tickers['fwdthresh'].value \
-          and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value \
+          and max(abs(corr_x), abs(corr_y)) > tickers['thr_yolo'].value * 0.7 \
           and (certainty in [hoop_detector.PredictionCertainty.CERTAIN, hoop_detector.PredictionCertainty.RELIABLE]):    #Don't move at yolo dist. Just balance
             drone_set_pitch(tickers['pitch'].value)
             pitching = True
