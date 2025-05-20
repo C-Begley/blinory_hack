@@ -394,7 +394,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
                 elif current_hoop_color == HOOP_COLOR.YELLOW:
                     tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.1)
                     current_hoop_color = HOOP_COLOR.BLUE
-                    yolo_time = 1.8     #This is still the YELLOW hoop!
+                    yolo_time = 2.0     #This is still the YELLOW hoop!
                 else:
                     print("This shouldn't happen... Stopping...")
                     current_hoop_color = HOOP_COLOR.NONE
@@ -454,7 +454,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
         print(f"In HoopFlyState YOLO_FWD ({current_hoop_color})")
         keys_pressed = pygame.key.get_pressed()
         overrule_w_x = 25
-        overrule_w_y = 25
+        overrule_w_y = 20
         overrule_roll = 0
         overrule_throttle = 0
         if keys_pressed[pygame.K_a]:
@@ -539,13 +539,13 @@ def hoop_flying():
                 case hoop_detector.PredictionCertainty.CERTAIN:
                     theta = 1
                 case hoop_detector.PredictionCertainty.RELIABLE:
-                    theta = 0.5
+                    theta = 0.7
                 #TODO: calculate correction ourselves in this case? Is it correct now?
                 case hoop_detector.PredictionCertainty.DIRECTION_ESTIMATE:
                     print(f"Estimate: {suggested_correction}")
-                    theta = 0.3
+                    theta = 0.6
                 case hoop_detector.PredictionCertainty.DIRECTION_GUESS:
-                    theta = 0.00
+                    theta = 0.03
                 case hoop_detector.PredictionCertainty.NOISY_PREDICTION:
                     theta = 0.00
                 case hoop_detector.PredictionCertainty.NONE:
