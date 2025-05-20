@@ -3,11 +3,11 @@ import led_drawning as LD
 def draw(drone):
     led_draw = LD.led_drawer(drone)
     # #Example drawning of R
-    led_draw.move(LD.Direction.UP, 1)
-    led_draw.move(LD.Direction.LEFT, 1)
-    led_draw.move(LD.Direction.DOWN, 1)
-    led_draw.move(LD.Direction.RIGHT, 3)
-    led_draw.move_and_bank(LD.Direction.DOWN, 1, LD.Direction.LEFT, 1)
+    led_draw.move(LD.Direction.UP, 1, speed=50)
+    led_draw.move(LD.Direction.LEFT, 1, speed =50)
+    led_draw.move(LD.Direction.DOWN, 1, speed=50)
+    led_draw.move(LD.Direction.RIGHT, 1, speed=50)
+    led_draw.move_and_bank(LD.Direction.DOWN, 1, LD.Direction.LEFT, 1, speed=50, roll=40)
     
     # #Draw an O
     # led_draw.move(LD.Direction.UP, 1)
@@ -53,14 +53,14 @@ def draw(drone):
     # # Busy with R: Moving drone to turn LED ON
     # led_draw.move(LD.Direction.YAW, 4)
     # # Busy with R: 
-    led_draw.move(LD.Direction.UP, 2.4)
-    # Busy with R: 
-    led_draw.move(LD.Direction.LEFT, 2)
-    # Busy with R: 
-    led_draw.move(LD.Direction.DOWN, 2.4)
-    # Busy with R: 
-    led_draw.move(LD.Direction.RIGHT, 3)
-    # Busy with R: 
+    # led_draw.move(LD.Direction.UP, 2.4)
+    # # Busy with R: 
+    # led_draw.move(LD.Direction.LEFT, 2)
+    # # Busy with R: 
+    # led_draw.move(LD.Direction.DOWN, 2.4)
+    # # Busy with R: 
+    # led_draw.move(LD.Direction.RIGHT, 3)
+    # # Busy with R: 
     # led_draw.move_and_bank(LD.Direction.DOWN, 2.4, LD.Direction.LEFT, 2)
     # # Busy with R-D spacing: Moving drone to turn LED OFF
     # led_draw.move(LD.Direction.YAW, 4)
