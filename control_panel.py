@@ -157,8 +157,8 @@ sliders = [
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
         # Hoop fly aggressiveness
-        "roll":         Ticker(220, 100, -30, 30, 1.0, label_text="×Roll:", step=1),
-        "throttle":     Ticker(420, 100, -30, 30, 1.0, label_text="×Throttle:", step=1),
+        "roll":         Ticker(220, 100, -30, 30, 9.0, label_text="×Roll:", step=1),
+        "throttle":     Ticker(420, 100, -30, 30, 3.5, label_text="×Throttle:", step=0.5),
         "pitch":        Ticker(620, 100, 0, 100, 20, label_text="vPitch:", step=2),
         # Threshold before moving forward
         #TODO: calibrate
@@ -178,7 +178,7 @@ tickers = {
         "manual_yaw_speed":         Ticker(670, 600, 20, 100, 30, label_text="MvYaw", step=10),
 
         # Smoothing factor for hoop flying corrections
-        "smoothing":         Ticker(50, 650, 0, 50, 3, label_text="Smoothing", step=1),
+        "smoothing":         Ticker(50, 650, 0, 50, 0, label_text="Smoothing", step=1),
 
         # Manual offsets applied to ALL commands sent. (To compensate for e.g. bad props)
         "cRoll":        Ticker(50, 700, -100, 100, 10, label_text="cRoll", step=5),
@@ -285,22 +285,22 @@ def control_drone(corr_x, corr_y, dist, certainty):
 
     # yolo_time = 1.25    #1s #TODO: make ticker?
 
-    offset_x = 6 * tickers['roll'].value
+    offset_x = 10 + tickers['roll'].value
     #TODO: replace multip w ticker
-    if abs(corr_x) > 35 and dist > 4:
+    if abs(corr_x) > 35 and dist > 3:
         mult_x = 28 + offset_x
-    elif abs(corr_x) > 25 and dist > 3:
+    elif abs(corr_x) > 25 and dist > 2:
         mult_x = 18 + offset_x
-    elif abs(corr_x) > 15 and dist > 2:
+    elif abs(corr_x) > 15 and dist > 1.5:
         mult_x = 15 + offset_x
     elif abs(corr_x) > 5:
         mult_x = 10 + offset_x
     else:   #Very tiny differences
         mult_x = 9 + offset_x
 
-    offset_y = 6 * tickers['throttle'].value
+    offset_y = 6 + tickers['throttle'].value
     if abs(corr_y) > 35 and dist > 4:
-        mult_y = 16 + offset_y
+        mult_y = 17 + offset_y
     elif abs(corr_y) > 25 and dist > 3:
         mult_y = 15 + offset_y
     elif abs(corr_y) > 15 and dist > 2:
@@ -328,26 +328,26 @@ def control_drone(corr_x, corr_y, dist, certainty):
         if time() - time_started_stabilizing > stabilize_time:
             stabilizing = False
             # Check if we're actually making progress...
-            if sign(corr_x) == sign(last_corr_x):
-                if abs(corr_x) >= abs(last_corr_x):
-                    corr_boost_x += 0.6
-                else:
-                    corr_boost_x -= 0.05
-            else:
-                corr_boost_x = 0
+            # if sign(corr_x) == sign(last_corr_x):
+            #     if abs(corr_x) >= abs(last_corr_x):
+            #         corr_boost_x += 0.6
+            #     else:
+            #         corr_boost_x -= 0.05
+            # else:
+            #     corr_boost_x = 0
+            #
+            # if sign(corr_y) == sign(last_corr_y):
+            #     if abs(corr_y) >= abs(last_corr_y):
+            #         corr_boost_y += 0.5
+            #     else:
+            #         corr_boost_y -= 0.05
+            # else:
+            #     corr_boost_y = 0
+            # last_corr_x = corr_x
+            # last_corr_y = corr_y
 
-            if sign(corr_y) == sign(last_corr_y):
-                if abs(corr_y) >= abs(last_corr_y):
-                    corr_boost_y += 0.5
-                else:
-                    corr_boost_y -= 0.05
-            else:
-                corr_boost_y = 0
-            last_corr_x = corr_x
-            last_corr_y = corr_y
-
-        offset_boost_x += sign(corr_x) * (0.03 if abs(offset_boost_x) > 3 else 0.1)
-        offset_boost_y += sign(corr_y) * (0.03 if abs(offset_boost_y) > 3 else 0.1)
+        # offset_boost_x += sign(corr_x) * (0.03 if abs(offset_boost_x) > 3 else 0.1)
+        # offset_boost_y += sign(corr_y) * (0.03 if abs(offset_boost_y) > 3 else 0.1)
 
     elif hoop_fly_state == HoopFlyState.NONE:
         print(f"In HoopFlyState NONE ({current_hoop_color})")
