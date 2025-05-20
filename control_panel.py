@@ -31,7 +31,7 @@ from ui_elements import Button, Slider, Ticker
 
 # Set up the window
 WINDOW_WIDTH = 1000
-WINDOW_HEIGHT = 800
+WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Drone Controller")
 
@@ -56,6 +56,22 @@ def exit():
 
 drone = Drone()
 aruco = flyer.formation_flyer(2048, 1152, False)
+prioritise_roll = True
+prioritise_yaw = True
+priortiy_state = 0
+
+def set_yaw_priority():
+    global prioritise_yaw
+    global buttons
+    prioritise_yaw = not prioritise_yaw
+    buttons[4].text = "Yaw : {}".format(prioritise_yaw)
+
+def set_roll_priority():
+    global prioritise_roll
+    global buttons
+    prioritise_roll = not prioritise_roll
+    buttons[5].text = "Roll : {}".format(prioritise_roll)
+          
 
 # Create UI elements
 buttons = [
@@ -63,8 +79,10 @@ buttons = [
     Button(200, 50, 120, 40, "Land", RED, action=drone.land),
     Button(350, 50, 200, 40, "Emergency Stop", RED, action=drone.emergency_stop),
     Button(600, 50, 120, 40, "Exit", BLUE, action=exit),
-    Button(50, 100, 120, 40, "Activate", GREEN, action=drone.activate),
+    Button(500, 500, 120, 40, "Yaw : {}".format(prioritise_yaw), GREEN, action=set_yaw_priority),
+    Button(650, 500, 120, 40, "Roll : {}".format(prioritise_roll), RED, action=set_roll_priority)
 ]
+
 
 sliders = [
     #TODO: It's still not entirely clear whether Throttle should be 0 - 100, or -125 - +125
@@ -80,9 +98,10 @@ sliders = [
 
 #TODO: convert the other UI-lists to dicts as well. Will make it much easier in the long run
 tickers = {
-        "roll": Ticker(200, 100, -10, 10, 0, label_text="×Roll:"),
-        "pitch": Ticker(400, 100, -10, 10, 0, label_text="×Pitch:"),
-        "throttle": Ticker(600, 100, -10, 10, 0, label_text="×Throttle:"),
+        "roll": Ticker(200, 100, -10, 10, 6, label_text="×Roll:", step= 0.2),
+        "pitch": Ticker(400, 100, -10, 10, 6, label_text="×Pitch:", step=0.2),
+        "throttle": Ticker(600, 100, -10, 10, 6, label_text="×Throttle:", step=0.2),
+        "yaw": Ticker(800, 100, -10, 10, 2, label_text="xYaw:", step=0.2),
 }
 
 def set_stream_surface(frame):
@@ -134,7 +153,7 @@ def process_stream():
                         suggested_correction = (
                             -10*(aruco.x_cor/aruco.centre_x),
                             10*(aruco.y_cor/aruco.centre_y))
-                        suggested_yaw = aruco.yaw_cor
+                        suggested_yaw = (aruco.yaw_cor/45)*10
                         suggested_z = 10*aruco.z_cor
                     else:
                         suggested_correction = None
@@ -143,9 +162,10 @@ def process_stream():
                     print(suggested_correction, prev_correct_cmd)
 
                 if suggested_correction == None and prev_correct_cmd:
-                    print("all to 0: ")
+                    print("all  to 0: ")
                     drone.set_roll(0)
                     drone.set_throttle(0)
+                    drone.set_pitch(0)
                     drone.set_yaw(0)
                     prev_correct_cmd = False
                 else:
@@ -155,19 +175,23 @@ def process_stream():
                         and suggested_correction[1]:
                             print("Setting_roll: ",
                                     suggested_correction[0]*tickers['roll'].value)
-                            drone.set_roll(suggested_correction[0]*tickers['roll'].value)
                             print("Setting_throttle: ",
                                     suggested_correction[1]*tickers['throttle'].value)
+                            if prioritise_roll or (suggested_yaw == 0):
+                                drone.set_roll(suggested_correction[0]*tickers['roll'].value)
                             drone.set_throttle(suggested_correction[1]*tickers['throttle'].value)
                             prev_correct_cmd = True
                 if suggested_yaw != None:
                     print("Setting_yaw ",
-                                    suggested_yaw)
-                    drone.set_yaw(suggested_yaw)
+                                    suggested_yaw*tickers['yaw'].value)
+                    if prioritise_yaw or (suggested_correction[0] == 0):
+                        drone.set_yaw(suggested_yaw*tickers['yaw'].value)
+                    prev_correct_cmd = True
                 if suggested_z != None:
                     print("Setting_pitch ",
                                     suggested_z*tickers['pitch'].value)
                     drone.set_pitch(suggested_z*tickers['pitch'].value)
+                    prev_correct_cmd = True
 
                 set_stream_surface(frame)
         if PRINT_LOOPTIME:

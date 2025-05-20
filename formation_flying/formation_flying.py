@@ -33,12 +33,12 @@ def update_value(val, tol):
 
 class formation_flyer():
     def __init__(self, frame_width = 1024, frame_height = 1024, display_frame=True, draw_marker=True): 
-        self.x_tol = 10
-        self.y_tol = 10
+        self.x_tol = 5
+        self.y_tol = 5
         self.z_tol = 0.05
         self.z_target = 0.8
         self.roll_tol = 10
-        self.yaw_tol = 10
+        self.yaw_tol = 2
         self.pitch_tol = 10
 
         self.reset_corrections()
@@ -58,6 +58,7 @@ class formation_flyer():
         self.detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
 
     def reset_corrections(self):
+            self.detected = False
             self.x_cor = 0
             self.y_cor = 0
             self.z_cor = 0
@@ -117,12 +118,17 @@ class formation_flyer():
             if(len(ids)>1):
                 print("More markers received than expected")
             else:
+                self.detected = True
                 self.get_centre(corners)
                 self.get_vectors(frame, corners, ids)
                 self.get_angles()
                 self.get_distance()
                 if(self.draw_marker):
                     cv2.aruco.drawDetectedMarkers(frame, corners, ids)
+        else:
+            self.reset_corrections()
+
+
 
     def process_frame(self, frame):   
         
@@ -132,23 +138,17 @@ class formation_flyer():
         #Detect AruCo marker
         corners, ids, rejected = self.detector.detectMarkers(grey)
         
-        # Check that at least one ArUco marker was detected
-        if ids is not None:
-            if(len(ids)>1):
-                print("More markers received than expected")
-            else:
-                self.find_corrections(frame,corners,ids)
-        else:
-            self.reset_corrections()
+        self.find_corrections(frame,corners,ids)
+
 
         if(self.display_frame):
             cv2.imshow('frame',frame)
 
-        if(1):
+        if(self.correction):
             print("Move x: {:2f}, y: {:2f}, z {:2f}, roll : {:2f}, pitch: {:2f}, yaw: {:2f}".format(
                 self.x_cor, self.y_cor, self.z_cor, self.roll_cor, self.pitch_cor, self.yaw_cor))
 
-        self.correction = (self.x_cor != 0) or (self.y_cor != 0) or (self.yaw_cor !=0)
+        self.correction = (self.x_cor != 0) or (self.y_cor != 0) or (self.yaw_cor !=0) or (self.z_cor != 0)
 
     def run_webcam(self, vid):
 

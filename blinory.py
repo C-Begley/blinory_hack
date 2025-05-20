@@ -22,7 +22,7 @@ CMD_INDEX = 6
 CRC_INDEX = 18
 
 VERBOSE = True
-VVERBOSE = False
+VVERBOSE = False 
 
 
 class Drone:
@@ -89,24 +89,31 @@ class Drone:
     #TODO: Formulas aren't perfect yet, but I'm too lazy4mathz
     # 0 - 100 --> 0 - 255
     def set_throttle(self, val):
+        min(val, 100)
         #TODO: Which one is it? How does it work?
         # drone.control_throttle(int(val*2.55))
         self.throttle_val = int((val*1.25)+125)
 
     # -100 - +100 --> 0 - 255
     def set_pitch(self, val):
+        min(val, 100)
         self.pitch_val = int((val*1.25)+125)
 
     # -100 - +100 --> 0 - 255
     def set_roll(self, val):
+        min(val, 100)
         self.roll_val = int((val*1.25)+125)
 
     # -100 - +100 --> 0 - 255
     def set_yaw(self, val):
+        min(val, 100)
         self.yaw_val = int((val*1.25)+125)
 
 
     def send_msg(self, data):
+        if max(data) > 256:
+            print("Data to big", data)
+            return 
         if VVERBOSE:
             print(" ".join(hex(n) for n in data))
         self.socket.sendto(bytes(data), (self.drone_ip, self.drone_port))

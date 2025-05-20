@@ -14,7 +14,7 @@ test_image = test_image_loc + "unused0.jpg"
 
 #To be changed depending on size of marker
 # Side length of the ArUco marker in meters 
-marker_size = 0.13
+marker_size = 0.1
 
 # Define the 3D model points of the marker corners
 obj_points = np.array([
