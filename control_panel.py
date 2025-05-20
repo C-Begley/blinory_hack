@@ -74,6 +74,13 @@ time_since_hoop_start = None
 
 force_yolo = False
 
+'''
+TO TRY
+ - Increase the yolo-error thr
+ - Decrease the yolo times? (It appeared to overshoot)
+
+'''
+
 class HoopFlyState(Enum):
     NONE = 0,
     LOCK = 1,
@@ -359,7 +366,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
             #TODO: allow for some stabilization time? Will it help the drone?
     elif hoop_fly_state == HoopFlyState.LOCK:
         print(f"In HoopFlyState LOCK ({current_hoop_color})")
-        if ((max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value/2.5)) \
+        if ((max(abs(corr_x), abs(corr_y)) < (tickers['fwdthresh'].value)) \
           and (dist < tickers['thr_yolo'].value) \
           and (certainty == hoop_detector.PredictionCertainty.CERTAIN) \
           and (time() - time_since_hoop_start > time_before_yolo)) \
@@ -383,7 +390,7 @@ def control_drone(corr_x, corr_y, dist, certainty):
                     current_hoop_color = HOOP_COLOR.YELLOW
                     tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.2)
                     tickers['fwdthresh'].set_value(tickers['fwdthresh'].value - 1)
-                    yolo_time = 2.2     #This is still the RED hoop!
+                    yolo_time = 2.4     #This is still the RED hoop!
                 elif current_hoop_color == HOOP_COLOR.YELLOW:
                     tickers['thr_yolo'].set_value(tickers['thr_yolo'].value - 0.1)
                     current_hoop_color = HOOP_COLOR.BLUE
